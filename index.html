@@ -1,0 +1,1439 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Marginália</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: app shell — header + section nav (bottom bar on phones), shelf as a cover grid, sheets for detail/edit */
+:root{
+  --bg:#F3F5F1; --surface:#FFFFFF; --sunk:#E8ECE6; --line:#D5DCD3;
+  --fg:#18201C; --muted:#5D6A62; --accent:#2D5C4C; --accent-ink:#FFFFFF; --accent-soft:#DCE9E2;
+  --star:#B7801A; --heart:#B2364A; --danger:#A3302B;
+  --shadow:0 1px 2px rgba(20,30,25,.06),0 8px 24px rgba(20,30,25,.08);
+  --f-display:"Gloock",Georgia,"Times New Roman",serif;
+  --f-read:"Literata",Georgia,serif;
+  --f-ui:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111613; --surface:#18201C; --sunk:#0C100E; --line:#2A3530;
+  --fg:#E5EAE5; --muted:#97A59C; --accent:#86C3AC; --accent-ink:#0E1A15; --accent-soft:#1F3A30;
+  --star:#E3B04B; --heart:#E26C80; --danger:#E5726B;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111613; --surface:#18201C; --sunk:#0C100E; --line:#2A3530;
+  --fg:#E5EAE5; --muted:#97A59C; --accent:#86C3AC; --accent-ink:#0E1A15; --accent-soft:#1F3A30;
+  --star:#E3B04B; --heart:#E26C80; --danger:#E5726B;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{text-wrap:balance;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:14px;padding-block:12px}
+.brand{font-family:var(--f-display);font-size:26px;letter-spacing:.2px;line-height:1;white-space:nowrap}
+.brand em{font-style:normal;color:var(--accent)}
+.search{flex:1;min-width:0;position:relative;max-width:420px}
+.search input{width:100%;padding:9px 12px 9px 34px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.spacer{flex:1}
+.me{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;background:var(--sunk);flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:999px;font-weight:600;font-size:14px;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:transparent;border-color:transparent}
+.btn.ghost:hover{background:var(--sunk)}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.sm{padding:5px 10px;font-size:13px}
+
+/* nav */
+.nav{display:flex;gap:4px}
+.nav button{border:0;background:transparent;padding:10px 14px;border-radius:8px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px}
+.nav button[aria-current="page"]{color:var(--fg);background:var(--sunk)}
+.nav .count{font-size:12px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.subbar .wrap{padding-block:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+
+main{padding-block:20px 120px}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.section-head h1{font-family:var(--f-display);font-size:34px;font-weight:400;line-height:1.1}
+.section-head p{margin:4px 0 0;color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+select.sort{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600}
+
+/* covers */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:22px 18px}
+.card{background:none;border:0;padding:0;text-align:left;display:flex;flex-direction:column;gap:8px;min-width:0}
+.cover{position:relative;aspect-ratio:2/3;width:100%;max-width:100%;border-radius:3px 6px 6px 3px;overflow:hidden;color:#F2EBDA;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:space-between;padding:12% 11% 10% 15%;transition:transform .18s ease}
+.cover::before{content:"";position:absolute;inset:0 auto 0 0;width:7%;background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(255,255,255,.08) 70%,rgba(0,0,0,.12))}
+.cover::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 80% 0%,rgba(255,255,255,.12),transparent 60%);pointer-events:none}
+.card:hover .cover{transform:translateY(-3px)}
+.cover .ct{font-family:var(--f-display);font-size:clamp(14px,1.5vw,18px);line-height:1.12;overflow-wrap:anywhere;position:relative}
+.cover .ca{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.85;position:relative}
+.cover .rule{height:1px;background:currentColor;opacity:.45;margin:10px 0;position:relative}
+.cover.big .ct{font-size:24px}
+.cover.big .ca{font-size:12px}
+.cover .ribbon{position:absolute;top:0;right:12%;width:12px;height:26px;background:#E7C35A;clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
+.meta-line{display:flex;align-items:center;gap:6px;min-height:18px;color:var(--muted);font-size:12.5px}
+.card .t{font-weight:600;font-size:14px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .a{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.progress{height:4px;border-radius:2px;background:var(--sunk);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent)}
+
+.stars{display:inline-flex;gap:1px;color:var(--star);vertical-align:middle}
+.stars svg{display:block}
+.heart{color:var(--heart)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+.pill.s-lendo{background:var(--accent-soft);color:var(--accent)}
+.pill.s-lido{background:color-mix(in srgb,var(--star) 18%,transparent);color:var(--star)}
+.pill.s-abandonado{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+.pill.example{background:transparent;border:1px dashed var(--line)}
+
+/* reading now strip */
+.now{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:28px}
+.now-card{display:grid;grid-template-columns:70px 1fr;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;text-align:left;min-width:0}
+.now-card .info{min-width:0;display:flex;flex-direction:column;gap:4px}
+.now-card .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+/* TBR list */
+.tbr{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.tbr-row{display:grid;grid-template-columns:28px 52px 1fr auto;gap:14px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--line);background:none;border-left:0;border-right:0;border-top:0;text-align:left;width:100%}
+.tbr-row:hover{background:var(--surface)}
+.tbr-row .n{font-family:var(--f-display);font-size:20px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.tbr-row .body{min-width:0}
+.tbr-row .t{font-weight:600}
+.tbr-row .sub{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prio{font-size:12px;font-weight:700;color:var(--muted)}
+.prio.alta{color:var(--accent)}
+
+/* feed */
+.feed{display:flex;flex-direction:column;gap:14px;max-width:720px}
+.post{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;grid-template-columns:64px 1fr;gap:16px;text-align:left;width:100%}
+.post .who{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:6px;flex-wrap:wrap}
+.post .who b{color:var(--fg)}
+.post .t{font-family:var(--f-display);font-size:19px;line-height:1.2}
+.post .review{font-family:var(--f-read);font-size:15px;line-height:1.6;margin:8px 0 0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.post .foot{display:flex;gap:14px;margin-top:10px;color:var(--muted);font-size:13px}
+.people{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}
+.person{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 4px;font-size:13px}
+.person b{font-weight:600}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}
+.panel h3{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:12px}
+.big-num{font-family:var(--f-display);font-size:48px;line-height:1;font-variant-numeric:tabular-nums}
+.big-num small{font-family:var(--f-ui);font-size:15px;color:var(--muted);margin-left:6px}
+.goal-bar{height:10px;border-radius:5px;background:var(--sunk);overflow:hidden;margin:14px 0 8px}
+.goal-bar i{display:block;height:100%;background:var(--accent);border-radius:5px}
+.hist{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;align-items:end;height:120px}
+.hist div{background:var(--star);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}
+.hist-x{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;font-size:10.5px;color:var(--muted);text-align:center;margin-top:4px;font-variant-numeric:tabular-nums}
+.months{display:grid;grid-template-columns:repeat(12,1fr);gap:5px;align-items:end;height:110px}
+.months div{background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}
+.months-x{display:grid;grid-template-columns:repeat(12,1fr);gap:5px;font-size:10.5px;color:var(--muted);text-align:center;margin-top:4px}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bars .row{display:grid;grid-template-columns:110px 1fr 28px;gap:10px;align-items:center;font-size:13px}
+.bars .row span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bars .track{height:8px;background:var(--sunk);border-radius:4px;overflow:hidden}
+.bars .track i{display:block;height:100%;background:var(--accent)}
+.bars .row span:last-child{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+
+/* empty */
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:36px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:12px}
+.empty h2{font-family:var(--f-display);font-weight:400;font-size:24px;color:var(--fg)}
+.empty .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.note{font-size:13px;color:var(--muted)}
+.banner{background:var(--accent-soft);color:var(--fg);border-radius:var(--r);padding:10px 14px;font-size:13.5px;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(8,12,10,.45);z-index:40;display:flex;align-items:center;justify-content:center;padding:24px}
+.sheet{background:var(--bg);border-radius:14px;width:min(860px,100%);max-height:calc(100dvh - 48px);overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative}
+.sheet-head{position:sticky;top:0;z-index:2;background:var(--bg);display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.sheet-body{padding:20px}
+.close{width:36px;height:36px;border-radius:50%;border:0;background:var(--sunk);display:grid;place-items:center}
+.detail{display:grid;grid-template-columns:220px 1fr;gap:28px}
+.detail .side{display:flex;flex-direction:column;gap:12px}
+.detail h2{font-family:var(--f-display);font-weight:400;font-size:34px;line-height:1.08}
+.detail .by{font-size:16px;color:var(--muted);margin-top:4px}
+.facts{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:13px;margin-top:10px}
+.facts span{white-space:nowrap}
+.syn{font-family:var(--f-read);line-height:1.65;color:var(--muted);margin:14px 0 0;max-width:65ch}
+.my-take{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.my-take blockquote{font-family:var(--f-read);font-size:17px;line-height:1.7;margin:10px 0 0;max-width:65ch;white-space:pre-wrap}
+.rate-big{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.thread{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.cmt{display:grid;grid-template-columns:30px 1fr;gap:10px}
+.cmt .h{font-size:13px;color:var(--muted)}
+.cmt .h b{color:var(--fg)}
+.cmt p{margin:2px 0 0;font-family:var(--f-read);line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.composer{display:flex;gap:8px;align-items:flex-end}
+.composer textarea{flex:1;min-width:0}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+
+/* form */
+form.edit{display:grid;grid-template-columns:repeat(6,1fr);gap:14px 16px}
+.field{display:flex;flex-direction:column;gap:5px;grid-column:span 6;min-width:0}
+.field.h3{grid-column:span 3}.field.h2{grid-column:span 2}
+.field label,.field .lab{font-size:12.5px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 11px}
+textarea{resize:vertical;min-height:90px;font-family:var(--f-read);line-height:1.6}
+.title-row{display:flex;gap:8px}
+.title-row input{flex:1;min-width:0}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;font-weight:600;font-size:13.5px;color:var(--muted)}
+.seg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.rate-input{display:inline-flex;align-items:center;gap:10px}
+.rate-input .hit{display:inline-flex;position:relative;color:var(--star)}
+.rate-input .hit button{position:absolute;top:0;bottom:0;width:50%;border:0;background:transparent;padding:0}
+.rate-input .hit button:first-child{left:0}.rate-input .hit button:last-child{right:0}
+.like-toggle{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;display:inline-flex;gap:6px;align-items:center;font-weight:600;font-size:13px;color:var(--muted)}
+.like-toggle[aria-pressed="true"]{color:var(--heart);border-color:var(--heart)}
+.form-foot{grid-column:span 6;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:6px}
+.ai-msg{grid-column:span 6;font-size:13px;color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;z-index:60;box-shadow:var(--shadow)}
+
+/* reading stats + settings */
+.rstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:12px}
+.rstat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+.rstat b{display:block;font-family:var(--f-display);font-size:22px;font-weight:400;line-height:1.2;font-variant-numeric:tabular-nums}
+.rstat span{font-size:12px;color:var(--muted)}
+.timer{font-family:var(--f-display);font-size:30px;font-variant-numeric:tabular-nums}
+.results{grid-column:span 6;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.results button{border:0;border-bottom:1px solid var(--line);background:var(--surface);text-align:left;padding:10px 12px}
+.results button:last-child{border-bottom:0}
+.results button:hover{background:var(--sunk)}
+.radio-list{display:flex;flex-direction:column;gap:8px}
+.radio-list label{display:grid;grid-template-columns:20px 1fr;gap:10px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface);cursor:pointer}
+.radio-list input{margin-top:4px;accent-color:var(--accent)}
+
+/* reader */
+.reader{position:fixed;inset:0;z-index:50;background:var(--bg);color:var(--fg);display:flex;flex-direction:column}
+.r-top{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);background:var(--surface)}
+.r-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-stat{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.r-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.r-text{max-width:38em;margin:0 auto;padding:28px max(20px,env(safe-area-inset-right,0px)) 80px max(20px,env(safe-area-inset-left,0px));font-family:var(--f-read);font-size:var(--r-size,19px);line-height:1.7;overflow-wrap:break-word}
+.r-text img,.r-text svg{max-width:100%;height:auto}
+.r-text h1,.r-text h2,.r-text h3{font-family:var(--f-display);font-weight:400;margin:1.2em 0 .6em;line-height:1.2}
+.r-text a{color:var(--accent)}
+.r-text table{display:block;overflow-x:auto}
+.r-pdf{display:flex;justify-content:safe center;padding:16px;overflow:auto}
+.r-pdf canvas{box-shadow:var(--shadow);background:#fff;flex:none}
+.r-bottom{display:flex;align-items:center;gap:10px;padding:8px max(12px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));border-top:1px solid var(--line);background:var(--surface)}
+.r-bottom input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+
+/* phones */
+@media (max-width:760px){
+  .top .wrap{gap:10px}
+  .brand{font-size:22px}
+  .me span,.top .add-label{display:none}
+  .subbar .wrap{padding:0}
+  .nav{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);border-top:1px solid var(--line);justify-content:space-around;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+  .nav button{flex-direction:column;gap:2px;font-size:11.5px;padding:6px 8px;flex:1}
+  .nav .count{display:none}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:18px 12px}
+  .section-head h1{font-size:28px}
+  .scrim{padding:0;align-items:flex-end}
+  .sheet{border-radius:16px 16px 0 0;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 12px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .detail{grid-template-columns:1fr}
+  .detail .side{flex-direction:row;align-items:flex-start}
+  .detail .side .cover{width:120px;flex:none}
+  .detail h2{font-size:28px}
+  .field.h3,.field.h2{grid-column:span 3}
+  .post{grid-template-columns:52px 1fr;gap:12px}
+  .tbr-row{grid-template-columns:22px 44px 1fr auto;gap:10px}
+  .r-top .btn.sm,.r-bottom .btn.sm{padding:5px 9px}
+}
+@media (max-width:480px){#rLeft{display:none}}
+@media (min-width:761px){.nav-mobile-only{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">Margin<em>á</em>lia</div>
+    <label class="search" for="q">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar título, autor, gênero…" autocomplete="off">
+    </label>
+    <div class="spacer"></div>
+    <button class="btn primary" id="addBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="add-label">Adicionar livro</span></button>
+    <button class="btn ghost" id="setBtn" type="button" data-act="settings" aria-label="Ajustes" title="Ajustes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    <div class="me" id="meBox"></div>
+  </div>
+</header>
+<div class="subbar"><div class="wrap"><nav class="nav" id="nav" aria-label="Seções"></nav></div></div>
+<main class="wrap" id="view" aria-live="polite"></main>
+<div id="layer"></div>
+
+<script>
+(() => {
+"use strict";
+
+// ---------- constants ----------
+const STATUS = [
+  {id:"lendo", label:"Lendo"},
+  {id:"lido", label:"Lido"},
+  {id:"quero", label:"Quero ler"},
+  {id:"abandonado", label:"Abandonado"},
+];
+const STATUS_LABEL = Object.fromEntries(STATUS.map(s => [s.id, s.label]));
+const CLOTH = ["#2F4858","#6B2737","#2F5240","#7A5A2A","#3B3768","#8A3B2B","#1E5C68","#5A4535","#4A5A22","#6E2E58","#24364F","#7B4A1E"];
+const MONTHS = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const LOCAL_KEY = "marginalia.local.v1";
+
+// ---------- state ----------
+const S = {
+  mode: "loading",          // loading | cloud | local
+  myId: null,
+  me: null,                 // {name, avatarUrl}
+  myProfile: {goal: 24},
+  books: new Map(),         // my books, id -> data
+  members: [],              // [{id, data}]
+  others: new Map(),        // uid -> Map(bookId -> data)
+  talk: new Map(),          // uid -> Map(cid -> data)  (comments + likes authored by uid)
+  profiles: {},
+  view: "estante",
+  filter: "todos",
+  sort: "recent",
+  q: "",
+  open: null,               // {owner, id} for detail sheet
+  editing: null,            // book object being edited or {} for new
+  settings: false,
+  files: new Set(),         // book ids with a readable file on this device
+  run: null,                // manual reading session in progress {bookId, start, startPage}
+  canWrite: true,
+  stale: false,
+};
+let db = null, user = null, sample = null, downloads = null;
+const subs = new Map();     // key -> unsubscribe
+
+// ---------- helpers ----------
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const hash = s => { let h = 2166136261; for (const c of String(s)) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const now = () => new Date().toISOString();
+const yearOf = d => d ? Number(String(d).slice(0, 4)) : null;
+const thisYear = new Date().getFullYear();
+const fmtDate = d => { if (!d) return ""; const [y, m, dd] = String(d).slice(0, 10).split("-"); return `${Number(dd)} ${MONTHS[Number(m) - 1]} ${y}`; };
+const ago = iso => {
+  if (!iso) return "";
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return "agora";
+  if (s < 3600) return `${Math.floor(s / 60)} min`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h`;
+  if (s < 86400 * 30) return `${Math.floor(s / 86400)} d`;
+  return fmtDate(iso.slice(0, 10));
+};
+const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+const today = () => new Date().toISOString().slice(0, 10);
+const fmtDur = min => {
+  const m = Math.round(min);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60), r = m % 60;
+  return `${h}h${r ? String(r).padStart(2, "0") : ""}`;
+};
+const fmtClock = ms => {
+  const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
+  return (h ? `${h}:${String(m).padStart(2, "0")}` : `${m}`) + `:${String(ss).padStart(2, "0")}`;
+};
+const ppmText = v => v.toFixed(2).replace(".", ",");
+function progressOf(b) {
+  if (b.status === "lido") return 100;
+  if (b.pages && b.currentPage) return Math.min(100, b.currentPage / b.pages * 100);
+  return Number(b.progressPct) || 0;
+}
+function readingStats(b) {
+  const ss = b.sessions || [];
+  const min = ss.reduce((s, x) => s + (Number(x.min) || 0), 0);
+  const pg = ss.reduce((s, x) => s + (Number(x.pages) || 0), 0);
+  const ppm = min >= 1 && pg > 0 ? pg / min : 0;
+  const left = ppm && b.pages ? Math.max(0, b.pages - (Number(b.currentPage) || 0)) / ppm : null;
+  return {sessions: ss.length, min, pg, ppm, pct: progressOf(b), left};
+}
+function saveRun() {
+  try { S.run ? localStorage.setItem("marginalia.run", JSON.stringify(S.run)) : localStorage.removeItem("marginalia.run"); } catch (_) {}
+}
+const lookupOn = () => S.myProfile.lookup === "openlibrary" || (S.myProfile.lookup === "claude" && !!sample);
+
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.append(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
+function starSvg(fill, size) {
+  // fill: 0, .5, 1
+  const id = "g" + Math.random().toString(36).slice(2, 8);
+  const path = "M12 2.6l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.3l-5.9 3.2 1.3-6.5L2.5 9.4l6.6-.8z";
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="${id}"><stop offset="${fill * 100}%" stop-color="currentColor"/><stop offset="${fill * 100}%" stop-color="currentColor" stop-opacity=".18"/></linearGradient></defs><path d="${path}" fill="url(#${id})"/></svg>`;
+}
+function stars(r, size = 13) {
+  if (!r) return "";
+  let h = "";
+  for (let i = 1; i <= 5; i++) h += starSvg(r >= i ? 1 : r >= i - .5 ? .5 : 0, size);
+  return `<span class="stars" role="img" aria-label="${String(r).replace(".", ",")} de 5 estrelas">${h}</span>`;
+}
+const heartSvg = (on, size = 14) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 7.9 3.6 4.5 7 4.5c2.1 0 3.6 1.1 5 3 1.4-1.9 2.9-3 5-3 3.4 0 5.6 3.4 4.3 6.8-1.8 4.6-9.3 9.2-9.3 9.2z" fill="${on ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.8"/></svg>`;
+
+function coverHtml(b, big = false) {
+  const c = b.color || CLOTH[hash((b.title || "") + (b.author || "")) % CLOTH.length];
+  const ribbon = b.status === "lendo" ? `<span class="ribbon"></span>` : "";
+  return `<div class="cover${big ? " big" : ""}" style="background:${c}">${ribbon}<div><div class="ct">${esc(b.title || "Sem título")}</div><div class="rule"></div></div><div class="ca">${esc(b.author || "")}</div></div>`;
+}
+
+function nameOf(id) {
+  if (id === S.myId) return "Você";
+  return (S.profiles[id] && S.profiles[id].name) || "Alguém";
+}
+const BLANK_AVATAR = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#8A968F"/></svg>');
+function avatarOf(id) { return (S.profiles[id] && S.profiles[id].avatarUrl) || BLANK_AVATAR; }
+async function resolveProfiles() {
+  if (!user || !user.profiles) return;
+  const ids = new Set(S.members.map(m => m.id));
+  for (const [, m] of S.talk) for (const [, c] of m) if (c.bookOwner) ids.add(c.bookOwner);
+  if (S.myId) ids.add(S.myId);
+  try { S.profiles = await user.profiles([...ids]); } catch (_) {}
+}
+
+// ---------- storage: cloud (db) or local ----------
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    S.books = new Map(Object.entries(d.books || {}));
+    S.myProfile = Object.assign({goal: 24}, d.profile || {});
+  } catch (_) {}
+}
+function saveLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify({books: Object.fromEntries(S.books), profile: S.myProfile})); } catch (_) {}
+}
+const shelfDoc = id => db.doc(`shelves/${id}`);
+const booksCol = id => db.collection(`shelves/${id}/books`);
+const talkCol = id => db.collection(`shelves/${id}/talk`);
+
+async function saveBook(b) {
+  b.updatedAt = now();
+  if (!b.addedAt) b.addedAt = b.updatedAt;
+  S.books.set(b.id, b);
+  if (S.mode === "cloud") {
+    await ensureMember();
+    await booksCol(S.myId).doc(b.id).set(b);
+  } else saveLocal();
+  render();
+}
+async function deleteBook(id) {
+  S.books.delete(id);
+  if (S.mode === "cloud") await booksCol(S.myId).doc(id).delete();
+  else saveLocal();
+  render();
+}
+let memberWritten = false;
+async function ensureMember() {
+  if (S.mode !== "cloud" || memberWritten) return;
+  const ref = shelfDoc(S.myId);
+  const snap = await ref.get();
+  if (!snap.exists) await ref.set({joinedAt: now(), goal: S.myProfile.goal || 24});
+  memberWritten = true;
+}
+async function saveProfile(patch) {
+  Object.assign(S.myProfile, patch);
+  if (S.mode === "cloud") { await ensureMember(); await shelfDoc(S.myId).update(patch); }
+  else saveLocal();
+  render();
+}
+
+function watch(key, ref, onData) {
+  if (subs.has(key)) return;
+  const un = ref.onSnapshot(onData, () => { subs.delete(key); });
+  subs.set(key, un);
+}
+function startCloud() {
+  S.mode = "cloud";
+  S.books = new Map();
+  const timer = setTimeout(() => { S.stale = true; render(); }, 10000);
+  watch("members", db.collection("shelves"), snap => {
+    clearTimeout(timer); S.stale = false;
+    S.members = snap.docs.map(d => ({id: d.id, data: d.data()}));
+    const mine = S.members.find(m => m.id === S.myId);
+    if (mine) { memberWritten = true; S.myProfile = Object.assign({goal: 24}, mine.data); }
+    for (const m of S.members) {
+      watch("books:" + m.id, booksCol(m.id), s => {
+        const map = new Map(s.docs.map(d => [d.id, d.data()]));
+        if (m.id === S.myId) S.books = map; else S.others.set(m.id, map);
+        render();
+      });
+      watch("talk:" + m.id, talkCol(m.id), s => {
+        S.talk.set(m.id, new Map(s.docs.map(d => [d.id, d.data()])));
+        render();
+      });
+    }
+    if (!mine) {
+      // my own books stream even before I'm a member (first write creates it)
+      watch("books:" + S.myId, booksCol(S.myId), s => { S.books = new Map(s.docs.map(d => [d.id, d.data()])); render(); });
+    }
+    resolveProfiles().then(render);
+    render();
+  });
+}
+
+// ---------- derived ----------
+function myBooks() { return [...S.books.values()]; }
+function matches(b) {
+  if (!S.q) return true;
+  const q = norm(S.q);
+  return [b.title, b.author, (b.genres || []).join(" "), b.review].some(x => norm(x).includes(q));
+}
+function sorted(list) {
+  const by = {
+    recent: (a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")),
+    rating: (a, b) => (b.rating || 0) - (a.rating || 0),
+    title: (a, b) => norm(a.title).localeCompare(norm(b.title)),
+    author: (a, b) => norm(a.author).localeCompare(norm(b.author)),
+    finished: (a, b) => String(b.finishedAt || "").localeCompare(String(a.finishedAt || "")),
+  }[S.sort];
+  return list.slice().sort(by);
+}
+function commentsFor(owner, bookId) {
+  const out = [];
+  for (const [author, m] of S.talk) for (const [cid, c] of m) {
+    if (c.bookOwner === owner && c.bookId === bookId) out.push({author, cid, ...c});
+  }
+  return out.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+}
+function bookOf(owner, id) {
+  if (owner === S.myId || S.mode !== "cloud") return S.books.get(id);
+  return S.others.get(owner) && S.others.get(owner).get(id);
+}
+
+// ---------- render ----------
+const NAV = [
+  {id:"estante", label:"Estante", icon:'<path d="M4 4h4v16H4zM10 4h4v16h-4zM16.5 4.8l3.7-1 3 15.5-3.7 1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" transform="scale(.92) translate(1 1)"/>'},
+  {id:"quero", label:"Quero ler", icon:'<path d="M6 3h12v18l-6-4-6 4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'},
+  {id:"amigos", label:"Amigos", icon:'<circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 4.8a3.3 3.3 0 0 1 0 6.4M18 14.8c2 .6 3.2 2.4 3.5 5.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'},
+  {id:"numeros", label:"Números", icon:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'},
+];
+function renderNav() {
+  const all = myBooks();
+  const counts = {estante: all.length, quero: all.filter(b => b.status === "quero").length, amigos: "", numeros: ""};
+  $("#nav").innerHTML = NAV.map(n => `<button type="button" data-nav="${n.id}" ${S.view === n.id ? 'aria-current="page"' : ""}><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">${n.icon}</svg>${n.label}${counts[n.id] !== "" && counts[n.id] ? ` <span class="count">${counts[n.id]}</span>` : ""}</button>`).join("");
+}
+function renderMe() {
+  const box = $("#meBox");
+  if (S.mode === "cloud" && S.me) {
+    box.innerHTML = `${S.me.avatarUrl ? `<img class="avatar" alt="" src="${esc(S.me.avatarUrl)}">` : ""}`;
+    box.title = S.me.name || "";
+  } else if (S.mode === "local") {
+    box.innerHTML = `<span>Salvo neste aparelho</span>`;
+  } else box.innerHTML = "";
+}
+
+function render() {
+  renderNav(); renderMe();
+  const v = $("#view");
+  if (S.mode === "loading") { v.innerHTML = `<p class="note">Abrindo sua estante…</p>`; return; }
+  const view = {estante: viewShelf, quero: viewTbr, amigos: viewFriends, numeros: viewStats}[S.view] || viewShelf;
+  v.innerHTML = (S.stale ? `<div class="banner">Ainda não consegui falar com o servidor. O que aparece aqui pode estar desatualizado.</div>` : "") + view();
+  renderLayer();
+}
+
+function bookCard(b, owner = S.myId) {
+  const pct = b.status === "lendo" && progressOf(b) ? Math.round(progressOf(b)) : null;
+  const meta = b.status === "lido" || b.status === "abandonado"
+    ? `${stars(b.rating)}${b.liked ? `<span class="heart">${heartSvg(true, 12)}</span>` : ""}${b.review ? `<span title="Tem resenha">≡</span>` : ""}`
+    : b.status === "lendo" ? `<span>${pct != null ? pct + "%" : "Lendo"}</span>` : `<span>${STATUS_LABEL[b.status] || ""}</span>`;
+  return `<button class="card" type="button" data-open="${esc(owner)}|${esc(b.id)}">
+    ${coverHtml(b)}
+    ${pct != null ? `<div class="progress"><i style="width:${pct}%"></i></div>` : ""}
+    <div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author || "")}</div></div>
+    <div class="meta-line">${meta}</div>
+  </button>`;
+}
+
+function emptyShelf() {
+  return `<div class="empty">
+    <h2>Sua estante está vazia</h2>
+    <p>Adicione o que você já leu, o que está lendo e o que quer ler. Dá pra dar nota de meia em meia estrela e escrever uma resenha.</p>
+    <div class="row"><button class="btn primary" type="button" data-act="add">Adicionar primeiro livro</button><button class="btn" type="button" data-act="examples">Ver com livros de exemplo</button></div>
+  </div>`;
+}
+
+function viewShelf() {
+  const all = myBooks();
+  if (!all.length) return `<div class="section-head"><div><h1>Estante</h1></div></div>${emptyShelf()}`;
+  const reading = all.filter(b => b.status === "lendo");
+  const filters = [["todos", "Todos"], ...STATUS.map(s => [s.id, s.label]), ["favoritos", "Favoritos"]];
+  let list = all.filter(matches);
+  if (S.filter === "favoritos") list = list.filter(b => b.liked);
+  else if (S.filter !== "todos") list = list.filter(b => b.status === S.filter);
+  list = sorted(list);
+  const hasExamples = all.some(b => b.example);
+  return `
+  ${hasExamples ? `<div class="banner">Alguns livros aqui são exemplos. <button class="btn sm" type="button" data-act="clear-examples">Remover exemplos</button></div>` : ""}
+  ${reading.length && S.filter === "todos" && !S.q ? `<div class="label" style="margin-bottom:10px">Lendo agora</div><div class="now">${reading.map(b => {
+    const pct = Math.round(progressOf(b));
+    return `<button class="now-card" type="button" data-open="${esc(S.myId)}|${esc(b.id)}">${coverHtml(b)}<div class="info"><div class="t">${esc(b.title)}</div><div class="note">${esc(b.author || "")}</div><div class="progress"><i style="width:${pct}%"></i></div><div class="note">${b.currentPage ? `pág. ${b.currentPage}${b.pages ? ` de ${b.pages}` : ""}` : "Toque para marcar a página"}</div></div></button>`;
+  }).join("")}</div>` : ""}
+  <div class="section-head">
+    <div><h1>Estante</h1><p>${all.filter(b => b.status === "lido").length} lidos · ${all.filter(b => b.status === "quero").length} na fila</p></div>
+    <div class="chips">
+      ${filters.map(([id, l]) => `<button class="chip" type="button" data-filter="${id}" aria-pressed="${S.filter === id}">${l}</button>`).join("")}
+      <select class="sort" id="sortSel" aria-label="Ordenar">
+        ${[["recent","Recentes"],["rating","Nota"],["finished","Data de leitura"],["title","Título"],["author","Autor"]].map(([v, l]) => `<option value="${v}" ${S.sort === v ? "selected" : ""}>${l}</option>`).join("")}
+      </select>
+    </div>
+  </div>
+  ${list.length ? `<div class="grid">${list.map(b => bookCard(b)).join("")}</div>` : `<p class="note">Nada encontrado com esse filtro.</p>`}`;
+}
+
+function viewTbr() {
+  const list = myBooks().filter(b => b.status === "quero" && matches(b));
+  const rank = {alta: 0, media: 1, baixa: 2};
+  list.sort((a, b) => (rank[a.priority || "media"] - rank[b.priority || "media"]) || String(a.addedAt).localeCompare(String(b.addedAt)));
+  return `<div class="section-head"><div><h1>Quero ler</h1><p>${list.length ? `${list.length} livro${list.length > 1 ? "s" : ""} na fila, por prioridade` : "Sua fila de próximas leituras"}</p></div>
+    <button class="btn" type="button" data-act="add-tbr">Adicionar à fila</button></div>
+  ${list.length ? `<div class="tbr">${list.map((b, i) => `<button class="tbr-row" type="button" data-open="${esc(S.myId)}|${esc(b.id)}">
+    <span class="n">${i + 1}</span>${coverHtml(b)}
+    <span class="body"><span class="t">${esc(b.title)}</span><br><span class="sub">${esc([b.author, b.pages ? b.pages + " pág." : "", b.recommendedBy ? "indicado por " + b.recommendedBy : ""].filter(Boolean).join(" · "))}</span></span>
+    <span class="prio ${b.priority || "media"}">${{alta: "Alta", media: "Média", baixa: "Baixa"}[b.priority || "media"]}</span>
+  </button>`).join("")}</div>` : `<div class="empty"><h2>Nenhum livro na fila</h2><p>Guarde aqui os livros que você quer ler, com prioridade e quem indicou.</p><button class="btn primary" type="button" data-act="add-tbr">Adicionar à fila</button></div>`}`;
+}
+
+function viewFriends() {
+  if (S.mode !== "cloud") {
+    return `<div class="section-head"><div><h1>Amigos</h1></div></div><div class="empty"><h2>Entre com sua conta para ver os amigos</h2><p>Neste modo os livros ficam só neste aparelho. Abrindo pelo claude.ai com login, sua estante sincroniza entre PC e celular e os amigos com quem você compartilhar o link aparecem aqui.</p></div>`;
+  }
+  const others = S.members.filter(m => m.id !== S.myId);
+  const posts = [];
+  for (const m of S.members) {
+    const map = m.id === S.myId ? S.books : (S.others.get(m.id) || new Map());
+    for (const [, b] of map) {
+      if (b.example) continue;
+      if (b.status === "lido" || b.status === "abandonado" || b.status === "lendo") posts.push({owner: m.id, b});
+    }
+  }
+  posts.sort((a, b) => String(b.b.updatedAt || "").localeCompare(String(a.b.updatedAt || "")));
+  const feed = posts.filter(p => matches(p.b)).slice(0, 60);
+  const verb = b => b.status === "lido" ? (b.rating ? "avaliou" : "terminou") : b.status === "lendo" ? "está lendo" : "abandonou";
+  return `<div class="section-head"><div><h1>Amigos</h1><p>O que todo mundo com o link anda lendo e achando</p></div></div>
+  ${others.length ? `<div class="people">${S.members.map(m => {
+    const map = m.id === S.myId ? S.books : (S.others.get(m.id) || new Map());
+    const read = [...map.values()].filter(b => b.status === "lido" && yearOf(b.finishedAt) === thisYear).length;
+    return `<span class="person"><img class="avatar" alt="" src="${esc(avatarOf(m.id))}"><b>${esc(nameOf(m.id))}</b><span class="note">${read} em ${thisYear}</span></span>`;
+  }).join("")}</div>` : `<div class="banner">Por enquanto só você está aqui. Compartilhe o link desta página com amigos (como Colaborador) e as leituras deles aparecem neste mural.</div>`}
+  ${feed.length ? `<div class="feed">${feed.map(({owner, b}) => {
+    const cs = commentsFor(owner, b.id);
+    const likes = cs.filter(c => c.kind === "like").length;
+    const cmts = cs.filter(c => c.kind === "comment").length;
+    return `<button class="post" type="button" data-open="${esc(owner)}|${esc(b.id)}">${coverHtml(b)}<div style="min-width:0">
+      <div class="who"><img class="avatar" style="width:22px;height:22px" alt="" src="${esc(avatarOf(owner))}"><b>${esc(nameOf(owner))}</b> ${verb(b)} <span>· ${ago(b.updatedAt)}</span></div>
+      <div class="t">${esc(b.title)}</div><div class="note">${esc(b.author || "")}</div>
+      <div style="margin-top:6px;display:flex;gap:6px;align-items:center">${stars(b.rating, 15)}${b.liked ? `<span class="heart">${heartSvg(true, 14)}</span>` : ""}</div>
+      ${b.review ? `<p class="review">${esc(b.review)}</p>` : ""}
+      <div class="foot"><span>${heartSvg(false, 13)} ${likes}</span><span>${cmts} comentário${cmts === 1 ? "" : "s"}</span></div>
+    </div></button>`;
+  }).join("")}</div>` : `<p class="note">Ninguém registrou leituras ainda.</p>`}`;
+}
+
+function viewStats() {
+  const all = myBooks().filter(b => !b.example || myBooks().every(x => x.example));
+  const readThisYear = all.filter(b => b.status === "lido" && yearOf(b.finishedAt) === thisYear);
+  const goal = Number(S.myProfile.goal) || 24;
+  const pct = Math.min(100, Math.round(readThisYear.length / goal * 100));
+  const pages = readThisYear.reduce((s, b) => s + (Number(b.pages) || 0), 0);
+  const rated = all.filter(b => b.rating);
+  const avg = rated.length ? (rated.reduce((s, b) => s + b.rating, 0) / rated.length) : 0;
+  const hist = Array.from({length: 10}, (_, i) => rated.filter(b => b.rating === (i + 1) / 2).length);
+  const hMax = Math.max(1, ...hist);
+  const months = Array.from({length: 12}, (_, i) => readThisYear.filter(b => Number(String(b.finishedAt).slice(5, 7)) === i + 1).length);
+  const mMax = Math.max(1, ...months);
+  const genres = {};
+  for (const b of all.filter(b => b.status === "lido")) for (const g of b.genres || []) genres[g] = (genres[g] || 0) + 1;
+  const topG = Object.entries(genres).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const gMax = Math.max(1, ...topG.map(g => g[1]));
+  const authors = {};
+  for (const b of all.filter(b => b.status === "lido" && b.author)) authors[b.author] = (authors[b.author] || 0) + 1;
+  const topA = Object.entries(authors).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const aMax = Math.max(1, ...topA.map(a => a[1]));
+  const yS = all.flatMap(b => b.sessions || []).filter(s => yearOf(s.at) === thisYear);
+  const yMin = yS.reduce((s, x) => s + (Number(x.min) || 0), 0);
+  const yPg = yS.reduce((s, x) => s + (Number(x.pages) || 0), 0);
+  const yPpm = yMin >= 1 && yPg ? yPg / yMin : 0;
+  const days = new Set(yS.map(s => new Date(s.at).toLocaleDateString("sv")));
+  let streak = 0; const day = new Date();
+  if (!days.has(day.toLocaleDateString("sv"))) day.setDate(day.getDate() - 1);
+  while (days.has(day.toLocaleDateString("sv"))) { streak++; day.setDate(day.getDate() - 1); }
+  return `<div class="section-head"><div><h1>Números de ${thisYear}</h1><p>Contam só os livros marcados como lidos com data de término</p></div></div>
+  <div class="stats">
+    <div class="panel"><h3>Meta do ano</h3>
+      <div class="big-num">${readThisYear.length}<small>de ${goal} livros</small></div>
+      <div class="goal-bar"><i style="width:${pct}%"></i></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span class="note">${pct}% da meta</span>
+      <span style="display:flex;gap:6px;align-items:center"><label class="note" for="goalIn">Meta</label><input id="goalIn" type="number" min="1" max="999" value="${goal}" style="width:76px;padding:5px 8px"></span></div>
+    </div>
+    <div class="panel"><h3>Páginas lidas</h3><div class="big-num">${pages.toLocaleString("pt-BR")}<small>páginas</small></div><p class="note">${readThisYear.length ? `Média de ${Math.round(pages / readThisYear.length)} por livro` : "Nenhum livro terminado este ano ainda"}</p></div>
+    <div class="panel"><h3>Nota média</h3><div class="big-num">${avg ? avg.toFixed(1).replace(".", ",") : "–"}<small>${rated.length} avaliados</small></div><div style="margin-top:10px">${stars(Math.round(avg * 2) / 2, 18)}</div></div>
+    <div class="panel"><h3>Como você avalia</h3>
+      <div class="hist">${hist.map((n, i) => `<div title="${(i + 1) / 2} estrelas: ${n}" style="height:${n / hMax * 100}%"></div>`).join("")}</div>
+      <div class="hist-x">${hist.map((_, i) => `<span>${i % 2 ? (i + 1) / 2 : "½"}</span>`).join("")}</div>
+    </div>
+    <div class="panel"><h3>Terminados por mês</h3>
+      <div class="months">${months.map((n, i) => `<div title="${MONTHS[i]}: ${n}" style="height:${n / mMax * 100}%"></div>`).join("")}</div>
+      <div class="months-x">${MONTHS.map(m => `<span>${m[0].toUpperCase()}</span>`).join("")}</div>
+    </div>
+    <div class="panel"><h3>Gêneros mais lidos</h3>${topG.length ? `<div class="bars">${topG.map(([g, n]) => `<div class="row"><span>${esc(g)}</span><span class="track"><i style="width:${n / gMax * 100}%"></i></span><span>${n}</span></div>`).join("")}</div>` : `<p class="note">Adicione gêneros aos seus livros para ver aqui.</p>`}</div>
+    <div class="panel"><h3>Autores mais lidos</h3>${topA.length ? `<div class="bars">${topA.map(([g, n]) => `<div class="row"><span>${esc(g)}</span><span class="track"><i style="width:${n / aMax * 100}%"></i></span><span>${n}</span></div>`).join("")}</div>` : `<p class="note">Nada por aqui ainda.</p>`}</div>
+    <div class="panel"><h3>Tempo de leitura</h3><div class="big-num">${yMin ? fmtDur(yMin) : "–"}<small>${yS.length} sess${yS.length === 1 ? "ão" : "ões"}</small></div><p class="note">${yPpm ? `Ritmo médio de ${ppmText(yPpm)} páginas por minuto` : "Use o leitor ou o cronômetro de sessão para medir seu ritmo"}${streak ? ` · ${streak} dia${streak > 1 ? "s" : ""} seguido${streak > 1 ? "s" : ""} lendo` : ""}</p></div>
+    <div class="panel"><h3>Seus dados</h3><p class="note">Guarde uma cópia da estante em JSON ou traga de volta uma cópia salva.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn sm" type="button" data-act="export">Baixar cópia</button><label class="btn sm" for="importIn">Importar cópia</label><input id="importIn" type="file" accept="application/json,.json" hidden></div></div>
+  </div>`;
+}
+
+// ---------- sheets ----------
+function renderLayer() {
+  const layer = $("#layer");
+  if (S.editing) { if (!layer.dataset.mode || layer.dataset.mode !== "edit") { layer.dataset.mode = "edit"; layer.innerHTML = sheet("", formHtml(S.editing)); wireForm(); } return; }
+  if (S.settings) { layer.dataset.mode = "settings"; layer.innerHTML = sheet("", settingsHtml()); return; }
+  if (S.open) {
+    const b = bookOf(S.open.owner, S.open.id);
+    if (!b) { S.open = null; layer.innerHTML = ""; layer.dataset.mode = ""; return; }
+    const key = S.open.owner + "|" + S.open.id;
+    const same = layer.dataset.mode === "detail" && layer.dataset.key === key;
+    const keep = {};
+    layer.querySelectorAll("input[id], textarea[id]").forEach(el => { if (el.type !== "file") keep[el.id] = el.value; });
+    const scroll = $(".sheet") ? $(".sheet").scrollTop : 0;
+    layer.dataset.mode = "detail"; layer.dataset.key = key;
+    layer.innerHTML = sheet(S.open.owner === S.myId ? "" : `<span class="note">Estante de ${esc(nameOf(S.open.owner))}</span>`, detailHtml(b, S.open.owner));
+    if (same) {
+      for (const [id, v] of Object.entries(keep)) { const el = document.getElementById(id); if (el) el.value = v; }
+      $(".sheet").scrollTop = scroll;
+    }
+    return;
+  }
+  layer.innerHTML = ""; layer.dataset.mode = "";
+}
+function sheet(headLeft, body) {
+  return `<div class="scrim" data-act="close-scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-head"><div>${headLeft}</div><button class="close" type="button" data-act="close" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><div class="sheet-body">${body}</div></div></div>`;
+}
+
+function detailHtml(b, owner) {
+  const mine = owner === S.myId;
+  const cs = commentsFor(owner, b.id);
+  const likes = cs.filter(c => c.kind === "like");
+  const iLiked = likes.some(c => c.author === S.myId);
+  const cmts = cs.filter(c => c.kind === "comment");
+  const pct = b.pages && b.currentPage ? Math.min(100, Math.round(b.currentPage / b.pages * 100)) : 0;
+  const facts = [b.year, b.pages ? `${b.pages} páginas` : "", (b.genres || []).join(", "), b.isbn ? `ISBN ${b.isbn}` : ""].filter(Boolean);
+  const dates = [b.startedAt ? `Começou em ${fmtDate(b.startedAt)}` : "", b.finishedAt ? `${b.status === "abandonado" ? "Parou" : "Terminou"} em ${fmtDate(b.finishedAt)}` : ""].filter(Boolean);
+  return `<div class="detail">
+    <div class="side">${coverHtml(b, true)}
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span class="pill s-${b.status}">${STATUS_LABEL[b.status] || ""}</span>
+        ${b.example ? `<span class="pill example">Exemplo</span>` : ""}
+        ${mine ? `<button class="btn sm" type="button" data-act="edit">Editar</button>` : ""}
+      </div>
+    </div>
+    <div style="min-width:0">
+      <h2>${esc(b.title)}</h2>
+      <div class="by">${esc(b.author || "Autor desconhecido")}</div>
+      ${facts.length ? `<div class="facts">${facts.map(f => `<span>${esc(f)}</span>`).join("")}</div>` : ""}
+      ${b.synopsis ? `<p class="syn">${esc(b.synopsis)}</p>` : ""}
+
+      ${mine ? progressBlock(b) + readHereBlock(b) : ""}
+
+      ${(b.rating || b.review || b.liked || dates.length) ? `<div class="my-take">
+        <div class="label">${mine ? "Sua avaliação" : `Avaliação de ${esc(nameOf(owner))}`}</div>
+        <div class="rate-big" style="margin-top:8px">${stars(b.rating, 22)}${b.rating ? `<b>${String(b.rating).replace(".", ",")}</b>` : ""}${b.liked ? `<span class="heart" title="Favorito">${heartSvg(true, 20)}</span>` : ""}</div>
+        ${dates.length ? `<div class="facts">${dates.map(d => `<span>${d}</span>`).join("")}</div>` : ""}
+        ${b.review ? `<blockquote>${esc(b.review)}</blockquote>` : ""}
+      </div>` : (mine && b.status !== "quero" ? `<div class="my-take"><button class="btn" type="button" data-act="edit">Dar nota e escrever resenha</button></div>` : "")}
+
+      ${b.status === "quero" && mine ? `<div class="my-take"><div class="facts"><span>Prioridade ${({alta: "alta", media: "média", baixa: "baixa"})[b.priority || "media"]}</span>${b.recommendedBy ? `<span>Indicado por ${esc(b.recommendedBy)}</span>` : ""}</div><div style="margin-top:10px"><button class="btn primary sm" type="button" data-act="start">Comecei a ler</button></div></div>` : ""}
+
+      ${S.mode === "cloud" ? `<div class="thread">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div class="label">Conversa</div>
+          <button class="like-toggle" type="button" data-act="like" aria-pressed="${iLiked}">${heartSvg(iLiked, 14)} ${likes.length ? likes.length : ""} ${iLiked ? "Curtiu" : "Curtir"}</button></div>
+        ${cmts.length ? cmts.map(c => `<div class="cmt"><img class="avatar" alt="" src="${esc(avatarOf(c.author))}"><div><div class="h"><b>${esc(nameOf(c.author))}</b> · ${ago(c.at)} ${c.author === S.myId ? `<button class="btn ghost sm" type="button" data-del-cmt="${esc(c.cid)}">Apagar</button>` : ""}</div><p>${esc(c.text)}</p></div></div>`).join("") : `<p class="note">${mine ? "Quando amigos comentarem sua leitura, aparece aqui." : "Seja o primeiro a comentar."}</p>`}
+        <div class="composer"><textarea id="cmtIn" rows="2" placeholder="${mine ? "Escreva uma nota ou responda…" : "Comente essa leitura…"}" style="min-height:44px"></textarea><button class="btn primary" type="button" data-act="comment">Enviar</button></div>
+      </div>` : ""}
+
+      ${mine ? `<div class="my-take" id="delZone"><button class="btn ghost danger sm" type="button" data-act="ask-delete">Remover da estante</button></div>` : ""}
+    </div>
+  </div>`;
+}
+
+function progressBlock(b) {
+  const st = readingStats(b);
+  if (b.status !== "lendo" && !st.sessions) return "";
+  const lendo = b.status === "lendo";
+  const run = S.run && S.run.bookId === b.id ? S.run : null;
+  const maxAttr = b.pages ? `max="${b.pages}"` : "";
+  let controls = "";
+  if (lendo && run) {
+    controls = `<div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="timer" id="liveTimer">${fmtClock(Date.now() - run.start)}</span><span class="note">sessão em andamento, começou na pág. ${run.startPage}</span></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="note" for="endPg">Parei na página</label><input id="endPg" type="number" min="0" ${maxAttr} value="${run.startPage || ""}" style="width:96px"><button class="btn sm primary" type="button" data-act="sess-stop">Encerrar sessão</button><button class="btn sm ghost" type="button" data-act="sess-cancel">Descartar</button></div>
+    </div>`;
+  } else if (lendo) {
+    controls = `<div style="display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap">
+      <button class="btn sm" type="button" data-act="sess-start">Iniciar cronômetro de leitura</button>
+      <label class="note" for="pgIn">ou só marcar a página</label><input id="pgIn" type="number" min="0" ${maxAttr} value="${b.currentPage || ""}" style="width:90px"><button class="btn sm" type="button" data-act="save-page">Salvar</button>
+      <button class="btn sm primary" type="button" data-act="finish">Terminei</button>
+    </div>`;
+  }
+  return `<div class="my-take"><div class="label">Progresso e ritmo</div>
+    ${lendo ? `<div style="display:flex;align-items:center;gap:10px;margin-top:8px"><div class="progress" style="flex:1;height:8px"><i style="width:${st.pct}%"></i></div><span class="note">${Math.round(st.pct)}%</span></div>` : ""}
+    <div class="rstats">
+      <div class="rstat"><b>${Math.round(st.pct)}%</b><span>lido${b.pages && b.currentPage && lendo ? ` · pág. ${b.currentPage} de ${b.pages}` : ""}</span></div>
+      <div class="rstat"><b>${st.ppm ? ppmText(st.ppm) : "–"}</b><span>páginas por minuto</span></div>
+      <div class="rstat"><b>${st.min ? fmtDur(st.min) : "–"}</b><span>lendo, em ${st.sessions} sess${st.sessions === 1 ? "ão" : "ões"}</span></div>
+      ${lendo ? `<div class="rstat"><b>${st.left != null ? "~" + fmtDur(st.left) : "–"}</b><span>para terminar no seu ritmo</span></div>` : ""}
+    </div>
+    ${!b.pages ? `<p class="note">Informe o número de páginas (em Editar) para calcular ritmo e tempo restante.</p>` : ""}
+    ${controls}
+  </div>`;
+}
+
+function readHereBlock(b) {
+  const has = S.files.has(b.id);
+  return `<div class="my-take"><div class="label">Ler no app</div>
+    ${has ? `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><button class="btn primary" type="button" data-act="read">${b.progressPct ? `Continuar lendo · ${Math.round(b.progressPct)}%` : "Abrir leitor"}</button><button class="btn ghost sm" type="button" data-act="rm-file">Remover arquivo deste aparelho</button></div>`
+      : `<p class="note" style="margin:6px 0 10px">Tem o EPUB ou PDF? Adicione para ler aqui dentro. O arquivo fica só neste aparelho; progresso e ritmo sincronizam.</p><label class="btn sm" for="fileIn">Adicionar EPUB ou PDF</label><input id="fileIn" type="file" accept=".epub,.pdf,application/epub+zip,application/pdf" hidden>`}
+  </div>`;
+}
+
+function settingsHtml() {
+  const cur = S.myProfile.lookup || "off";
+  const opts = [
+    ["off", "Desligada", "Você preenche autor, páginas e o resto à mão. Não usa nada externo."],
+    ["openlibrary", "Open Library (grátis)", "Base pública e gratuita de livros. Dentro do claude.ai o navegador bloqueia sites externos, então essa opção só funciona quando o app tiver hospedagem própria."],
+  ];
+  if (sample) opts.push(["claude", "Claude", "Funciona aqui, mas cada busca gasta um pouco do seu uso do Claude."]);
+  return `<h2 style="font-family:var(--f-display);font-weight:400;font-size:30px">Ajustes</h2>
+    <div class="field" style="margin-top:18px"><span class="lab">Busca de dados dos livros</span><div class="radio-list">${opts.map(([v, l, d]) => `<label for="lk-${v}"><input type="radio" id="lk-${v}" name="lookup" value="${v}" ${cur === v ? "checked" : ""}><span><b>${l}</b><br><span class="note">${d}</span></span></label>`).join("")}</div></div>
+    <div class="field" style="margin-top:18px"><span class="lab">Arquivos para leitura</span><p class="note" style="margin:0">${S.files.size} livro${S.files.size === 1 ? "" : "s"} com arquivo neste aparelho. Os arquivos não vão para a nuvem nem para os amigos. Só o progresso e o ritmo sincronizam.</p></div>`;
+}
+
+function formHtml(b) {
+  const isNew = !b.id;
+  const st = b.status || "lido";
+  return `<form class="edit" id="bookForm" autocomplete="off">
+    <div class="field"><label for="f-title">Título</label><div class="title-row"><input id="f-title" type="text" required value="${esc(b.title)}" placeholder="Ex.: Torto Arado">${lookupOn() ? `<button class="btn" type="button" data-act="lookup" title="Preenche autor, ano, páginas e gêneros">Buscar dados</button>` : ""}</div>${lookupOn() ? "" : `<span class="note">Busca automática desligada. Dá para ativar em Ajustes.</span>`}</div>
+    <div class="ai-msg" id="aiMsg" hidden></div>
+    <div class="results" id="lkRes" hidden></div>
+    <div class="field h3"><label for="f-author">Autor</label><input id="f-author" type="text" value="${esc(b.author)}"></div>
+    <div class="field h2" style="grid-column:span 1"><label for="f-year">Ano</label><input id="f-year" type="number" value="${esc(b.year)}"></div>
+    <div class="field h2" style="grid-column:span 2"><label for="f-pages">Páginas</label><input id="f-pages" type="number" min="1" value="${esc(b.pages)}"></div>
+    <div class="field h3"><label for="f-genres">Gêneros (separe por vírgula)</label><input id="f-genres" type="text" value="${esc((b.genres || []).join(", "))}"></div>
+    <div class="field h3"><label for="f-isbn">ISBN</label><input id="f-isbn" type="text" value="${esc(b.isbn)}"></div>
+    <div class="field"><span class="lab">Status</span><div class="seg" id="f-status">${STATUS.map(s => `<button type="button" data-status="${s.id}" aria-pressed="${st === s.id}">${s.label}</button>`).join("")}</div></div>
+    <div class="field" data-show="lido abandonado"><span class="lab">Nota</span><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><span class="rate-input" id="f-rating" data-value="${b.rating || 0}"></span><button type="button" class="like-toggle" id="f-liked" aria-pressed="${!!b.liked}">${heartSvg(!!b.liked, 14)} Favorito</button></div></div>
+    <div class="field h3" data-show="lendo lido abandonado"><label for="f-start">Comecei em</label><input id="f-start" type="date" value="${esc(b.startedAt)}"></div>
+    <div class="field h3" data-show="lido abandonado"><label for="f-end">Terminei em</label><input id="f-end" type="date" value="${esc(b.finishedAt || (isNew ? new Date().toISOString().slice(0, 10) : ""))}"></div>
+    <div class="field h3" data-show="lendo"><label for="f-cur">Página atual</label><input id="f-cur" type="number" min="0" value="${esc(b.currentPage)}"></div>
+    <div class="field h3" data-show="quero"><label for="f-prio">Prioridade</label><select id="f-prio">${[["alta","Alta"],["media","Média"],["baixa","Baixa"]].map(([v, l]) => `<option value="${v}" ${(b.priority || "media") === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+    <div class="field h3" data-show="quero"><label for="f-rec">Quem indicou</label><input id="f-rec" type="text" value="${esc(b.recommendedBy)}"></div>
+    <div class="field" data-show="lido abandonado lendo"><label for="f-review">Resenha</label><textarea id="f-review" rows="5" placeholder="O que ficou com você? Personagens, frases, o que incomodou…">${esc(b.review)}</textarea></div>
+    <div class="field"><label for="f-syn">Sinopse</label><textarea id="f-syn" rows="3">${esc(b.synopsis)}</textarea></div>
+    <div class="form-foot"><span></span><div style="display:flex;gap:8px"><button class="btn" type="button" data-act="close">Cancelar</button><button class="btn primary" type="submit">${isNew ? "Adicionar" : "Salvar"}</button></div></div>
+  </form>`;
+}
+
+function paintRating(el) {
+  const v = Number(el.dataset.value) || 0;
+  let h = "";
+  for (let i = 1; i <= 5; i++) h += `<span class="hit">${starSvg(v >= i ? 1 : v >= i - .5 ? .5 : 0, 30)}<button type="button" data-rate="${i - .5}" aria-label="${i - .5} estrelas"></button><button type="button" data-rate="${i}" aria-label="${i} estrela${i > 1 ? "s" : ""}"></button></span>`;
+  el.innerHTML = h + `<span class="note" style="min-width:60px">${v ? String(v).replace(".", ",") + " / 5" : "Sem nota"}</span>`;
+}
+function currentStatus() { const p = $('#f-status [aria-pressed="true"]'); return p ? p.dataset.status : "lido"; }
+function applyShow() {
+  const st = currentStatus();
+  document.querySelectorAll("#bookForm [data-show]").forEach(f => { f.hidden = !f.dataset.show.split(" ").includes(st); });
+}
+function wireForm() {
+  paintRating($("#f-rating"));
+  applyShow();
+  $("#f-title").focus();
+}
+function readForm() {
+  const b = Object.assign({}, S.editing);
+  const v = id => $(id).value.trim();
+  b.id = b.id || uid();
+  b.title = v("#f-title");
+  b.author = v("#f-author");
+  b.year = v("#f-year") ? Number(v("#f-year")) : "";
+  b.pages = v("#f-pages") ? Number(v("#f-pages")) : "";
+  b.genres = v("#f-genres").split(",").map(s => s.trim()).filter(Boolean);
+  b.isbn = v("#f-isbn");
+  b.status = currentStatus();
+  b.rating = ["lido", "abandonado"].includes(b.status) ? (Number($("#f-rating").dataset.value) || 0) : 0;
+  b.liked = ["lido", "abandonado"].includes(b.status) && $("#f-liked").getAttribute("aria-pressed") === "true";
+  b.startedAt = b.status !== "quero" ? v("#f-start") : "";
+  b.finishedAt = ["lido", "abandonado"].includes(b.status) ? v("#f-end") : "";
+  b.currentPage = b.status === "lendo" && v("#f-cur") ? Number(v("#f-cur")) : "";
+  b.priority = b.status === "quero" ? v("#f-prio") : (b.priority || "");
+  b.recommendedBy = v("#f-rec");
+  b.review = b.status !== "quero" ? $("#f-review").value.trim() : (b.review || "");
+  b.synopsis = $("#f-syn").value.trim();
+  delete b.example;
+  return b;
+}
+
+async function aiFill(btn) {
+  const title = $("#f-title").value.trim();
+  const msg = $("#aiMsg");
+  if (!title) { msg.hidden = false; msg.textContent = "Digite o título primeiro."; return; }
+  btn.disabled = true; msg.hidden = false; msg.textContent = "Buscando os dados do livro…";
+  const author = $("#f-author").value.trim();
+  try {
+    const d = await sample.json(
+      `Você é um bibliotecário. Para o livro "${title}"${author ? ` de ${author}` : ""}, responda SOMENTE com um objeto JSON:\n` +
+      `{"title": string (título como publicado no Brasil, se houver edição brasileira), "author": string, "year": number (ano da 1ª publicação original), "pages": number (páginas de uma edição brasileira comum, ou da original), "genres": [até 3 gêneros curtos em português], "synopsis": string (2 frases, sem spoilers, em português)}\n` +
+      `Se não reconhecer o livro com segurança, responda {"unknown": true}.`,
+      {modelTier: "quick"});
+    if (!d || d.unknown) { msg.textContent = "Não reconheci esse livro. Preencha à mão ou confira o título."; return; }
+    const set = (id, val) => { if (val && !$(id).value.trim()) $(id).value = val; };
+    if (d.title) $("#f-title").value = d.title;
+    set("#f-author", d.author); set("#f-year", d.year); set("#f-pages", d.pages);
+    if (Array.isArray(d.genres)) set("#f-genres", d.genres.join(", "));
+    set("#f-syn", d.synopsis);
+    msg.textContent = "Dados preenchidos. Confira antes de salvar, eles podem ter erros.";
+  } catch (e) {
+    msg.textContent = e && (e.code === "not_granted" || e.code === "sampling_disabled") ? "O preenchimento automático não está liberado aqui. Preencha à mão." :
+      e && e.code === "rate_limited" ? "Muitos pedidos seguidos. Tente de novo daqui a pouco." : "Não deu para buscar agora. Tente de novo.";
+  } finally { btn.disabled = false; }
+}
+
+let LK = [];
+function lookup(btn) {
+  const mode = S.myProfile.lookup;
+  if (mode === "claude" && sample) return aiFill(btn);
+  if (mode === "openlibrary") return olSearch(btn);
+}
+async function olSearch(btn) {
+  const title = $("#f-title").value.trim(), author = $("#f-author").value.trim();
+  const msg = $("#aiMsg"), res = $("#lkRes");
+  if (!title) { msg.hidden = false; msg.textContent = "Digite o título primeiro."; return; }
+  btn.disabled = true; msg.hidden = false; msg.textContent = "Buscando no Open Library…"; res.hidden = true;
+  try {
+    const q = encodeURIComponent([title, author].filter(Boolean).join(" "));
+    const r = await fetch(`https://openlibrary.org/search.json?q=${q}&limit=6&fields=title,author_name,first_publish_year,number_of_pages_median,subject,isbn`);
+    if (!r.ok) throw new Error(String(r.status));
+    const d = await r.json();
+    LK = (d.docs || []).slice(0, 6);
+    if (!LK.length) { msg.textContent = "Nada encontrado. Confira o título."; return; }
+    msg.textContent = "Escolha o livro certo:";
+    res.innerHTML = LK.map((x, i) => `<button type="button" data-pick="${i}"><b>${esc(x.title)}</b><br><span class="note">${esc([(x.author_name || []).join(", "), x.first_publish_year, x.number_of_pages_median ? x.number_of_pages_median + " pág." : ""].filter(Boolean).join(" · "))}</span></button>`).join("");
+    res.hidden = false;
+  } catch (_) {
+    msg.textContent = "Não consegui acessar o Open Library daqui. Dentro do claude.ai o navegador bloqueia sites externos; essa busca funciona quando o app tiver hospedagem própria. Por enquanto, preencha à mão.";
+  } finally { btn.disabled = false; }
+}
+function pickResult(i) {
+  const d = LK[i]; if (!d) return;
+  const set = (id, val) => { if (val != null && val !== "") $(id).value = val; };
+  set("#f-title", d.title); set("#f-author", (d.author_name || [])[0]);
+  set("#f-year", d.first_publish_year); set("#f-pages", d.number_of_pages_median);
+  if (d.subject && !$("#f-genres").value.trim()) $("#f-genres").value = d.subject.slice(0, 3).join(", ");
+  set("#f-isbn", (d.isbn || [])[0]);
+  $("#lkRes").hidden = true; $("#aiMsg").textContent = "Dados preenchidos. Confira antes de salvar.";
+}
+
+// ---------- examples ----------
+const EXAMPLES = [
+  {title:"Torto Arado", author:"Itamar Vieira Junior", year:2019, pages:264, genres:["Romance","Literatura brasileira"], status:"lido", rating:4.5, liked:true, startedAt:`${thisYear}-01-08`, finishedAt:`${thisYear}-01-21`, review:"A voz das irmãs Bibiana e Belonísia carrega o livro. A segunda parte me pegou de jeito.", synopsis:"Duas irmãs no sertão baiano têm a vida marcada por um acidente na infância e pela luta pela terra."},
+  {title:"O Conto da Aia", author:"Margaret Atwood", year:1985, pages:368, genres:["Distopia","Ficção"], status:"lido", rating:4, startedAt:`${thisYear}-02-10`, finishedAt:`${thisYear}-03-02`, review:"Assustador justamente por parecer plausível.", synopsis:"Em Gilead, uma teocracia totalitária, Offred é obrigada a servir como aia reprodutora."},
+  {title:"Duna", author:"Frank Herbert", year:1965, pages:680, genres:["Ficção científica"], status:"lendo", currentPage:312, startedAt:`${thisYear}-10-15`, sessions:[{at:`${thisYear}-10-15T21:10:00.000Z`, min:38, pages:31, src:"manual"},{at:`${thisYear}-10-18T22:00:00.000Z`, min:52, pages:44, src:"manual"},{at:`${thisYear}-10-25T20:30:00.000Z`, min:47, pages:40, src:"manual"}], synopsis:"Paul Atreides chega ao planeta desértico Arrakis, única fonte da especiaria mais valiosa do universo."},
+  {title:"Grande Sertão: Veredas", author:"João Guimarães Rosa", year:1956, pages:560, genres:["Literatura brasileira","Clássico"], status:"quero", priority:"alta", recommendedBy:"Professora de literatura", synopsis:"Riobaldo, ex-jagunço, narra sua vida no sertão e seu amor por Diadorim."},
+  {title:"Pachinko", author:"Min Jin Lee", year:2017, pages:528, genres:["Romance histórico"], status:"quero", priority:"media", synopsis:"Quatro gerações de uma família coreana que imigra para o Japão."},
+  {title:"A Biblioteca da Meia-Noite", author:"Matt Haig", year:2020, pages:308, genres:["Ficção","Fantasia"], status:"abandonado", rating:2, startedAt:`${thisYear}-04-03`, finishedAt:`${thisYear}-04-12`, review:"A ideia é boa, mas ficou repetitivo pra mim.", synopsis:"Entre a vida e a morte, Nora encontra uma biblioteca com livros de todas as vidas que poderia ter vivido."},
+  {title:"Ensaio sobre a Cegueira", author:"José Saramago", year:1995, pages:312, genres:["Romance","Clássico"], status:"lido", rating:5, liked:true, startedAt:`${thisYear}-05-01`, finishedAt:`${thisYear}-05-19`, review:"Brutal e necessário. A mulher do médico é uma das personagens mais fortes que já li.", synopsis:"Uma epidemia de cegueira branca se espalha por uma cidade e expõe o pior e o melhor das pessoas."},
+];
+async function loadExamples() {
+  for (const e of EXAMPLES) await saveBook(Object.assign({id: uid(), example: true}, e));
+  toast("Exemplos adicionados");
+}
+async function clearExamples() {
+  for (const b of myBooks().filter(b => b.example)) await deleteBook(b.id);
+  toast("Exemplos removidos");
+}
+
+// ---------- comments / likes ----------
+async function addComment() {
+  const t = $("#cmtIn").value.trim();
+  if (!t) return;
+  await ensureMember();
+  const cid = uid();
+  const data = {kind: "comment", bookOwner: S.open.owner, bookId: S.open.id, text: t.slice(0, 2000), at: now()};
+  $("#cmtIn").value = "";
+  try { await talkCol(S.myId).doc(cid).set(data); } catch (e) { toast("Não consegui enviar o comentário"); $("#cmtIn").value = t; }
+}
+async function toggleLike() {
+  await ensureMember();
+  const id = `like_${S.open.owner}_${S.open.id}`.replace(/[^A-Za-z0-9_\-.~:@+]/g, "-").slice(0, 190);
+  const mine = S.talk.get(S.myId);
+  const ref = talkCol(S.myId).doc(id);
+  if (mine && mine.has(id)) await ref.delete();
+  else await ref.set({kind: "like", bookOwner: S.open.owner, bookId: S.open.id, at: now()});
+}
+
+// ---------- export / import ----------
+async function exportData() {
+  const data = JSON.stringify({app: "marginalia", version: 1, exportedAt: now(), profile: S.myProfile, books: myBooks()}, null, 2);
+  const name = `marginalia-${new Date().toISOString().slice(0, 10)}.json`;
+  if (!downloads) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([data], {type: "application/json"}));
+    a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    return;
+  }
+  try { await downloads.save({filename: name, data}); } catch (_) { toast("Download cancelado"); }
+}
+async function importData(file) {
+  try {
+    const d = JSON.parse(await file.text());
+    const list = Array.isArray(d.books) ? d.books : [];
+    let n = 0;
+    for (const b of list) { if (b && b.title) { await saveBook(Object.assign({}, b, {id: b.id || uid()})); n++; } }
+    toast(`${n} livro${n === 1 ? "" : "s"} importado${n === 1 ? "" : "s"}`);
+  } catch (_) { toast("Esse arquivo não é uma cópia válida da Marginália"); }
+}
+
+// ---------- files & reader ----------
+const IDB = {
+  _db: null,
+  open() {
+    if (!this._db) this._db = new Promise((res, rej) => {
+      const r = indexedDB.open("marginalia-files", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("files");
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+    return this._db;
+  },
+  async run(mode, fn) {
+    const d = await this.open();
+    return new Promise((res, rej) => {
+      const tx = d.transaction("files", mode);
+      const q = fn(tx.objectStore("files"));
+      tx.oncomplete = () => res(q && q.result);
+      tx.onerror = tx.onabort = () => rej(tx.error);
+    });
+  },
+  get(k) { return this.run("readonly", s => s.get(k)); },
+  put(k, v) { return this.run("readwrite", s => s.put(v, k)); },
+  del(k) { return this.run("readwrite", s => s.delete(k)); },
+  keys() { return this.run("readonly", s => s.getAllKeys()); },
+};
+async function addFile(file) {
+  const b = S.open && bookOf(S.open.owner, S.open.id); if (!b) return;
+  const n = file.name.toLowerCase();
+  const type = n.endsWith(".pdf") || file.type === "application/pdf" ? "pdf" : n.endsWith(".epub") || file.type === "application/epub+zip" ? "epub" : null;
+  if (!type) { toast("Use um arquivo EPUB ou PDF"); return; }
+  try { await IDB.put(b.id, {name: file.name, type, blob: file}); S.files.add(b.id); renderLayer(); toast("Arquivo guardado neste aparelho"); }
+  catch (_) { toast("Este navegador não deixou guardar o arquivo"); }
+}
+
+const SCRIPTS = {};
+function loadScript(src) {
+  if (!SCRIPTS[src]) SCRIPTS[src] = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = res; s.onerror = () => { delete SCRIPTS[src]; rej(new Error("load " + src)); };
+    document.head.append(s);
+  });
+  return SCRIPTS[src];
+}
+const CDN = {
+  jszip: "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
+  pdf: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+  pdfWorker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
+};
+const MIME = {svg: "image/svg+xml", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp"};
+let R = null;
+let rSize = 19;
+try { rSize = Number(localStorage.getItem("marginalia.rsize")) || 19; } catch (_) {}
+
+async function openReader(b) {
+  let f = null;
+  try { f = await IDB.get(b.id); } catch (_) {}
+  if (!f) { toast("O arquivo não está neste aparelho"); S.files.delete(b.id); renderLayer(); return; }
+  S.open = null; renderLayer();
+  if (b.status === "quero") { b = Object.assign({}, b, {status: "lendo", startedAt: b.startedAt || today()}); await saveBook(b); }
+  const root = document.createElement("div");
+  root.className = "reader"; root.setAttribute("role", "dialog"); root.setAttribute("aria-label", "Leitor");
+  root.innerHTML = `<div class="r-top">
+      <button class="close" type="button" data-r="close" aria-label="Fechar leitor"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="r-title">${esc(b.title)}</div>
+      <span class="r-stat" id="rTime" title="Tempo de leitura nesta sessão">0:00</span>
+      <span class="r-stat" id="rPct">0%</span>
+      <button class="btn sm" type="button" data-r="smaller" aria-label="Diminuir texto">A−</button>
+      <button class="btn sm" type="button" data-r="bigger" aria-label="Aumentar texto">A+</button>
+    </div>
+    <div class="r-body" id="rBody"><p class="note" style="padding:24px">Abrindo o livro…</p></div>
+    <div class="r-bottom"><button class="btn sm" type="button" data-r="prev">‹ Anterior</button><input type="range" id="rRange" min="0" max="1000" value="0" aria-label="Posição no livro"><span class="r-stat" id="rLeft"></span><button class="btn sm" type="button" data-r="next">Próximo ›</button></div>`;
+  document.body.append(root);
+  document.documentElement.style.overflow = "hidden";
+  const p0 = progressOf(b) >= 100 && b.status === "lido" ? (Number(b.progressPct) || 0) : progressOf(b);
+  R = {book: b, id: b.id, type: f.type, root, body: root.querySelector("#rBody"), active: 0, tick: Date.now(), act: Date.now(),
+       pct: p0, startPct: p0, ch: 0, frac: 0, page: 1, n: 0, zoom: 1, urls: [], dirty: false, savedAt: Date.now()};
+  R.body.addEventListener("scroll", onReaderScroll, {passive: true});
+  ["pointerdown", "wheel", "touchstart"].forEach(ev => root.addEventListener(ev, () => { if (R) R.act = Date.now(); }, {passive: true}));
+  try { if (f.type === "pdf") await openPdf(f.blob); else await openEpub(f.blob); }
+  catch (err) {
+    console.error(err);
+    if (R) R.body.innerHTML = `<div class="empty" style="margin:24px"><h2>Não consegui abrir esse arquivo</h2><p>${f.type === "epub" ? "Confira se é um EPUB sem proteção (DRM)." : "Confira se o PDF não está protegido por senha."}</p></div>`;
+  }
+}
+
+async function openPdf(blob) {
+  await loadScript(CDN.pdfWorker); await loadScript(CDN.pdf);
+  const doc = await window.pdfjsLib.getDocument({data: new Uint8Array(await blob.arrayBuffer()), isEvalSupported: false}).promise;
+  if (!R) return;
+  R.pdf = doc; R.n = doc.numPages;
+  R.page = Math.min(R.n, Math.max(1, (R.book.readPos && R.book.readPos.page) || 1));
+  R.body.innerHTML = `<div class="r-pdf"><canvas id="rCanvas"></canvas></div>`;
+  await drawPdf();
+}
+async function drawPdf() {
+  if (!R || !R.pdf) return;
+  const r = R;
+  const page = await r.pdf.getPage(r.page);
+  const base = page.getViewport({scale: 1});
+  const cssW = Math.max(200, Math.min(r.body.clientWidth - 32, 900)) * r.zoom;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const vp = page.getViewport({scale: cssW / base.width * dpr});
+  const c = r.body.querySelector("#rCanvas"); if (!c) return;
+  if (r.task) { try { r.task.cancel(); } catch (_) {} }
+  c.width = vp.width; c.height = vp.height;
+  c.style.width = Math.round(vp.width / dpr) + "px"; c.style.height = Math.round(vp.height / dpr) + "px";
+  r.task = page.render({canvasContext: c.getContext("2d"), viewport: vp});
+  try { await r.task.promise; } catch (_) {}
+  if (R !== r) return;
+  r.body.scrollTop = 0;
+  setPct(r.page / r.n * 100);
+}
+
+function resolvePath(from, rel) {
+  rel = String(rel).split("#")[0];
+  try { rel = decodeURIComponent(rel); } catch (_) {}
+  if (!rel) return from;
+  const parts = rel.startsWith("/") ? [] : from.split("/").slice(0, -1);
+  for (const seg of rel.replace(/^\//, "").split("/")) { if (seg === "..") parts.pop(); else if (seg && seg !== ".") parts.push(seg); }
+  return parts.join("/");
+}
+async function openEpub(blob) {
+  await loadScript(CDN.jszip);
+  const zip = await window.JSZip.loadAsync(blob);
+  const read = p => { const f = zip.file(p); if (!f) throw new Error("missing " + p); return f.async("text"); };
+  const xml = s => new DOMParser().parseFromString(s, "application/xml");
+  const container = xml(await read("META-INF/container.xml"));
+  const opfPath = container.getElementsByTagNameNS("*", "rootfile")[0].getAttribute("full-path");
+  const opf = xml(await read(opfPath));
+  const items = {};
+  for (const it of opf.getElementsByTagNameNS("*", "item")) items[it.getAttribute("id")] = resolvePath(opfPath, it.getAttribute("href"));
+  const spine = [...opf.getElementsByTagNameNS("*", "itemref")].map(r => items[r.getAttribute("idref")]).filter(p => p && zip.file(p));
+  if (!spine.length) throw new Error("empty spine");
+  const texts = await Promise.all(spine.map(read));
+  if (!R) return;
+  R.zip = zip; R.chapters = spine; R.texts = texts;
+  R.weights = texts.map(t => Math.max(1, t.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").length));
+  R.total = R.weights.reduce((a, b) => a + b, 0);
+  R.cum = []; let acc = 0; for (const w of R.weights) { R.cum.push(acc); acc += w; }
+  const pos = R.book.readPos || {};
+  await showChapter(Math.min(spine.length - 1, pos.ch || 0), pos.frac || 0);
+}
+async function showChapter(i, frac) {
+  if (!R || !R.chapters) return;
+  const r = R, path = r.chapters[i];
+  let doc = new DOMParser().parseFromString(r.texts[i], "application/xhtml+xml");
+  if (doc.getElementsByTagName("parsererror").length || !doc.body) doc = new DOMParser().parseFromString(r.texts[i], "text/html");
+  const body = doc.body;
+  body.querySelectorAll("script,style,link,iframe,object,embed,form,input,button,select,textarea,meta,base,audio,video").forEach(n => n.remove());
+  for (const el of body.querySelectorAll("*")) {
+    for (const a of [...el.attributes]) {
+      const n = a.name.toLowerCase();
+      if (n.startsWith("on") || n === "style" || (n.endsWith("href") && /^\s*javascript:/i.test(a.value))) el.removeAttribute(a.name);
+    }
+  }
+  await Promise.all([...body.querySelectorAll("img[src], image")].map(async img => {
+    const XL = "http://www.w3.org/1999/xlink";
+    const src = img.getAttribute("src") || img.getAttribute("href") || img.getAttributeNS(XL, "href");
+    if (!src || /^data:/.test(src)) return;
+    const p = resolvePath(path, src), f = r.zip.file(p);
+    if (!f) { img.remove(); return; }
+    const url = URL.createObjectURL(new Blob([await f.async("uint8array")], {type: MIME[p.split(".").pop().toLowerCase()] || ""}));
+    r.urls.push(url);
+    if (img.localName === "image") { img.setAttribute("href", url); img.setAttributeNS(XL, "xlink:href", url); }
+    else img.setAttribute("src", url);
+  }));
+  if (R !== r) return;
+  r.body.innerHTML = `<article class="r-text" id="rText" style="--r-size:${rSize}px"></article>`;
+  const art = r.body.querySelector("#rText");
+  for (const n of [...body.childNodes]) art.append(document.importNode(n, true));
+  art.addEventListener("click", e => {
+    const a = e.target.closest("a[href]"); if (!a) return;
+    const href = a.getAttribute("href");
+    if (/^[a-z]+:/i.test(href)) return;
+    e.preventDefault();
+    const idx = r.chapters.indexOf(resolvePath(path, href));
+    if (idx >= 0) showChapter(idx, 0);
+  });
+  r.ch = i;
+  requestAnimationFrame(() => {
+    if (R !== r) return;
+    r.body.scrollTop = frac * (r.body.scrollHeight - r.body.clientHeight);
+    onReaderScroll();
+  });
+}
+function onReaderScroll() {
+  if (!R) return;
+  R.act = Date.now();
+  if (R.type !== "epub" || !R.cum) return;
+  const max = R.body.scrollHeight - R.body.clientHeight;
+  R.frac = max > 0 ? Math.min(1, R.body.scrollTop / max) : 1;
+  setPct((R.cum[R.ch] + R.frac * R.weights[R.ch]) / R.total * 100);
+}
+function setPct(p) {
+  if (!R) return;
+  R.pct = Math.max(0, Math.min(100, p));
+  R.root.querySelector("#rPct").textContent = (R.pct < 10 ? R.pct.toFixed(1).replace(".", ",") : Math.round(R.pct)) + "%";
+  const rng = R.root.querySelector("#rRange");
+  if (document.activeElement !== rng) rng.value = Math.round(R.pct * 10);
+  R.dirty = true;
+  updateReaderStats();
+}
+const readerPages = () => Number(R.book.pages) || (R.type === "pdf" ? R.n : 0);
+function updateReaderStats() {
+  if (!R) return;
+  R.root.querySelector("#rTime").textContent = fmtClock(R.active);
+  const pages = readerPages();
+  const st = readingStats(bookOf(S.myId, R.id) || R.book);
+  const pgNow = pages ? Math.max(0, pages * (R.pct - R.startPct) / 100) : 0;
+  const min = st.min + R.active / 60000, pg = st.pg + pgNow;
+  const ppm = min >= 1 && pg > 0 ? pg / min : 0;
+  R.root.querySelector("#rLeft").textContent = ppm && pages ? `~${fmtDur(pages * (100 - R.pct) / 100 / ppm)} p/ terminar` : "";
+}
+async function saveReader(commit) {
+  if (!R) return;
+  const r = R;
+  r.savedAt = Date.now(); r.dirty = false;
+  const b = Object.assign({}, bookOf(S.myId, r.id) || r.book);
+  if (r.type === "pdf" && !b.pages && r.n) b.pages = r.n;
+  const pages = Number(b.pages) || 0;
+  b.progressPct = Math.round(r.pct * 10) / 10;
+  b.readPos = r.type === "pdf" ? {page: r.page} : {ch: r.ch, frac: Math.round(r.frac * 1000) / 1000};
+  if (pages && b.status !== "lido") b.currentPage = Math.round(pages * r.pct / 100);
+  if (commit && r.active >= 30000) {
+    const pg = pages ? Math.max(0, Math.round(pages * (r.pct - r.startPct) / 100)) : 0;
+    b.sessions = [...(b.sessions || []), {at: new Date(Date.now() - r.active).toISOString(), min: Math.round(r.active / 6000) / 10, pages: pg, src: r.type}].slice(-300);
+    r.active = 0; r.startPct = r.pct;
+  }
+  r.book = b;
+  try { await saveBook(b); } catch (_) {}
+}
+async function closeReader() {
+  if (!R) return;
+  const r = R;
+  await saveReader(true);
+  if (r.task) { try { r.task.cancel(); } catch (_) {} }
+  r.urls.forEach(u => URL.revokeObjectURL(u));
+  r.root.remove();
+  document.documentElement.style.overflow = "";
+  R = null;
+  S.open = {owner: S.myId, id: r.id}; renderLayer();
+}
+function readerStep(dir) {
+  if (!R) return;
+  R.act = Date.now();
+  if (R.type === "pdf") { const p = R.page + dir; if (R.pdf && p >= 1 && p <= R.n) { R.page = p; drawPdf(); } return; }
+  if (!R.chapters) return;
+  const el = R.body, max = el.scrollHeight - el.clientHeight;
+  if (dir > 0) { if (el.scrollTop < max - 4) el.scrollBy({top: el.clientHeight * .9, behavior: "smooth"}); else if (R.ch < R.chapters.length - 1) showChapter(R.ch + 1, 0); }
+  else { if (el.scrollTop > 4) el.scrollBy({top: -el.clientHeight * .9, behavior: "smooth"}); else if (R.ch > 0) showChapter(R.ch - 1, 1); }
+}
+function readerSeek(v) {
+  if (!R) return;
+  const p = v / 10;
+  if (R.type === "pdf") { if (!R.pdf) return; R.page = Math.max(1, Math.min(R.n, Math.round(p / 100 * R.n) || 1)); drawPdf(); return; }
+  if (!R.cum) return;
+  const target = p / 100 * R.total;
+  let i = R.cum.length - 1; while (i > 0 && R.cum[i] > target) i--;
+  showChapter(i, Math.min(1, (target - R.cum[i]) / R.weights[i]));
+}
+function readerZoom(d) {
+  if (!R) return;
+  if (R.type === "pdf") { R.zoom = Math.max(.6, Math.min(2.5, R.zoom + d * .15)); drawPdf(); return; }
+  rSize = Math.max(14, Math.min(28, rSize + d));
+  try { localStorage.setItem("marginalia.rsize", String(rSize)); } catch (_) {}
+  const art = R.body.querySelector("#rText");
+  if (art) { const f = R.frac; art.style.setProperty("--r-size", rSize + "px"); R.body.scrollTop = f * (R.body.scrollHeight - R.body.clientHeight); }
+}
+setInterval(() => {
+  const t = Date.now();
+  if (R) {
+    if (document.visibilityState === "visible" && t - R.act < 120000) R.active += t - R.tick;
+    R.tick = t;
+    updateReaderStats();
+    if (R.dirty && t - R.savedAt > 30000) saveReader(false);
+  }
+  const lt = document.getElementById("liveTimer");
+  if (lt && S.run) lt.textContent = fmtClock(t - S.run.start);
+}, 1000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && R) saveReader(true); });
+
+// ---------- events ----------
+function openNew(status) {
+  S.open = null;
+  S.editing = {status: status || "lido"};
+  $("#layer").dataset.mode = "";
+  renderLayer();
+}
+function closeLayer() { S.editing = null; S.open = null; S.settings = false; $("#layer").dataset.mode = ""; renderLayer(); }
+
+document.addEventListener("click", async e => {
+  const t = e.target.closest("button, [data-act], label");
+  if (!t) return;
+  if (t.dataset.r) {
+    const a = t.dataset.r;
+    if (a === "close") closeReader(); else if (a === "prev") readerStep(-1); else if (a === "next") readerStep(1);
+    else if (a === "smaller") readerZoom(-1); else if (a === "bigger") readerZoom(1);
+    return;
+  }
+  if (t.dataset.pick) { pickResult(Number(t.dataset.pick)); return; }
+  if (t.dataset.nav) { S.view = t.dataset.nav; render(); window.scrollTo(0, 0); return; }
+  if (t.dataset.filter) { S.filter = t.dataset.filter; render(); return; }
+  if (t.dataset.open) {
+    const [owner, id] = t.dataset.open.split("|");
+    S.open = {owner, id}; S.editing = null; renderLayer(); return;
+  }
+  if (t.dataset.status) {
+    document.querySelectorAll("#f-status button").forEach(b => b.setAttribute("aria-pressed", String(b === t)));
+    if (t.dataset.status === "lendo" && !$("#f-start").value) $("#f-start").value = new Date().toISOString().slice(0, 10);
+    applyShow(); return;
+  }
+  if (t.dataset.rate) {
+    const el = $("#f-rating"); const v = Number(t.dataset.rate);
+    el.dataset.value = Number(el.dataset.value) === v ? 0 : v; paintRating(el); return;
+  }
+  if (t.id === "f-liked") { const on = t.getAttribute("aria-pressed") !== "true"; t.setAttribute("aria-pressed", String(on)); t.innerHTML = `${heartSvg(on, 14)} Favorito`; return; }
+  if (t.dataset.delCmt) { try { await talkCol(S.myId).doc(t.dataset.delCmt).delete(); } catch (_) { toast("Não consegui apagar"); } return; }
+  const act = t.dataset.act;
+  if (!act) return;
+  if (act === "close-scrim") { if (e.target === t) closeLayer(); return; }
+  if (act === "close") return closeLayer();
+  if (act === "add") return openNew();
+  if (act === "add-tbr") return openNew("quero");
+  if (act === "examples") return loadExamples();
+  if (act === "clear-examples") return clearExamples();
+  if (act === "export") return exportData();
+  if (act === "settings") { S.settings = true; S.open = null; S.editing = null; $("#layer").dataset.mode = ""; renderLayer(); return; }
+  if (act === "lookup") return lookup(t);
+  if (act === "sess-cancel") { S.run = null; saveRun(); renderLayer(); return; }
+  if (act === "comment") return addComment();
+  if (act === "like") return toggleLike();
+  const b = S.open && bookOf(S.open.owner, S.open.id);
+  if (act === "edit" && b) { S.editing = Object.assign({}, b); S.open = null; $("#layer").dataset.mode = ""; renderLayer(); return; }
+  if (act === "read" && b) return openReader(b);
+  if (act === "rm-file" && b) { try { await IDB.del(b.id); } catch (_) {} S.files.delete(b.id); renderLayer(); toast("Arquivo removido deste aparelho"); return; }
+  if (act === "sess-start" && b) { S.run = {bookId: b.id, start: Date.now(), startPage: Number(b.currentPage) || 0}; saveRun(); renderLayer(); return; }
+  if (act === "sess-stop" && b && S.run) {
+    const run = S.run, end = Number($("#endPg").value) || run.startPage;
+    const min = (Date.now() - run.start) / 60000;
+    S.run = null; saveRun();
+    if (min < 0.5) { renderLayer(); toast("Sessão curta demais, não registrei"); return; }
+    const pages = Math.max(0, end - run.startPage);
+    const nb = Object.assign({}, b, {currentPage: end});
+    if (b.pages) nb.progressPct = Math.round(Math.min(100, end / b.pages * 100) * 10) / 10;
+    nb.sessions = [...(b.sessions || []), {at: new Date(run.start).toISOString(), min: Math.round(min * 10) / 10, pages, src: "manual"}].slice(-300);
+    await saveBook(nb);
+    toast(`Sessão salva: ${pages} páginas em ${fmtDur(min)}`);
+    return;
+  }
+  if (act === "save-page" && b) { const p = Number($("#pgIn").value) || 0; await saveBook(Object.assign({}, b, {currentPage: p})); toast("Página salva"); return; }
+  if (act === "finish" && b) { S.editing = Object.assign({}, b, {status: "lido", finishedAt: new Date().toISOString().slice(0, 10), currentPage: b.pages || b.currentPage}); S.open = null; $("#layer").dataset.mode = ""; renderLayer(); return; }
+  if (act === "start" && b) { await saveBook(Object.assign({}, b, {status: "lendo", startedAt: new Date().toISOString().slice(0, 10)})); toast("Boa leitura!"); return; }
+  if (act === "ask-delete") { $("#delZone").innerHTML = `<div class="confirm"><span>Remover “${esc(b.title)}” da estante?</span><button class="btn sm danger" type="button" data-act="do-delete">Remover</button><button class="btn sm" type="button" data-act="cancel-delete">Manter</button></div>`; return; }
+  if (act === "cancel-delete") { renderLayer(); return; }
+  if (act === "do-delete" && b) { const title = b.title; S.open = null; await deleteBook(b.id); toast(`“${title}” removido`); return; }
+});
+$("#addBtn").addEventListener("click", () => openNew());
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "bookForm") return;
+  e.preventDefault();
+  const b = readForm();
+  if (!b.title) return;
+  const wasNew = !S.editing.id;
+  S.editing = null; $("#layer").dataset.mode = "";
+  try { await saveBook(b); toast(wasNew ? "Livro adicionado" : "Alterações salvas"); }
+  catch (_) { toast("Não consegui salvar. Confira sua conexão."); }
+  S.open = {owner: S.myId, id: b.id}; renderLayer();
+});
+document.addEventListener("input", e => {
+  if (e.target.id === "q") { S.q = e.target.value; render(); }
+});
+document.addEventListener("change", async e => {
+  if (e.target.id === "sortSel") { S.sort = e.target.value; render(); }
+  if (e.target.id === "goalIn") { const g = Math.max(1, Number(e.target.value) || 24); await saveProfile({goal: g}); }
+  if (e.target.name === "lookup") { await saveProfile({lookup: e.target.value}); toast("Ajuste salvo"); }
+  if (e.target.id === "fileIn" && e.target.files[0]) addFile(e.target.files[0]);
+  if (e.target.id === "rRange") readerSeek(Number(e.target.value));
+  if (e.target.id === "importIn" && e.target.files[0]) importData(e.target.files[0]);
+});
+document.addEventListener("keydown", e => {
+  if (R) {
+    R.act = Date.now();
+    if (e.key === "Escape") closeReader();
+    else if (e.key === "ArrowRight" && e.target.id !== "rRange") { readerStep(1); e.preventDefault(); }
+    else if (e.key === "ArrowLeft" && e.target.id !== "rRange") { readerStep(-1); e.preventDefault(); }
+    return;
+  }
+  if (e.key === "Escape" && (S.open || S.editing || S.settings)) closeLayer();
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.id === "cmtIn") addComment();
+});
+
+// ---------- boot ----------
+try { const r = JSON.parse(localStorage.getItem("marginalia.run") || "null"); if (r && r.start) S.run = r; } catch (_) {}
+try { IDB.keys().then(k => { S.files = new Set(k); renderLayer(); }).catch(() => {}); } catch (_) {}
+render();
+(async () => {
+  const c = window.claude;
+  if (!c || !c.use) { S.mode = "local"; S.myId = "local"; loadLocal(); render(); return; }
+  [db, user, sample, downloads] = await Promise.all(["db", "user", "sample", "downloads"].map(n => c.use(n).catch(() => null)));
+  const id = user ? await user.id().catch(() => null) : null;
+  if (db && id) {
+    S.myId = id;
+    try { S.me = await user.me(); } catch (_) {}
+    try { const w = await user.can("data.write"); if (w === false) S.canWrite = false; } catch (_) {}
+    startCloud();
+    resolveProfiles().then(render);
+    setInterval(() => resolveProfiles().then(() => { if (S.view === "amigos" || S.open) render(); }), 30000);
+  } else {
+    S.mode = "local"; S.myId = "local"; loadLocal();
+  }
+  render();
+})();
+})();
+</script>
