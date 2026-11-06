@@ -3,6 +3,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F3F5F1">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111613">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Marginália">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script>
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+// Asked only once installed: in a regular tab some browsers would show a permission prompt on load.
+if ((matchMedia("(display-mode: standalone)").matches || navigator.standalone) && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+</script>
 <title>Marginália</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -760,8 +774,20 @@ function viewStats() {
 
 // ---------- sheets ----------
 let lockY = null;
+// An open sheet or the reader keeps one spare history entry, so the phone's back gesture closes it instead of leaving the app.
+// The entry stays after closing by button: going back from there would race with the next sheet opening.
+let backArmed = false;
+window.addEventListener("popstate", () => {
+  if (!backArmed) return;
+  backArmed = false;
+  if (R) closeReader();
+  else if (S.open || S.editing || S.settings) closeLayer();
+});
 function syncLock() {
   const on = !!(S.open || S.editing || S.settings || R);
+  if (on && !backArmed) {
+    try { history.pushState({marginalia: true}, ""); backArmed = true; } catch (_) {}
+  }
   document.querySelectorAll(".top,.subbar,#view").forEach(el => { el.inert = on; });
   $("#layer").inert = !!R;
   if (on && lockY == null) {
