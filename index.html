@@ -258,6 +258,10 @@ textarea{resize:vertical;min-height:90px;font-family:var(--f-read);line-height:1
 .r-text table{display:block;overflow-x:auto}
 .r-pdf{display:flex;justify-content:safe center;padding:16px;overflow:auto}
 .r-pdf canvas{box-shadow:var(--shadow);background:#fff;flex:none}
+/* Inverts the page but turns hues back, so photos and colored text keep their color. White becomes a soft dark gray, not pure black. */
+.reader.pdf-dark .r-pdf canvas{filter:invert(.88) hue-rotate(180deg)}
+.r-theme{display:inline-grid;place-items:center}
+.r-theme[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
 .r-bottom{display:flex;align-items:center;gap:10px;padding:8px max(12px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));border-top:1px solid var(--line);background:var(--surface)}
 .r-bottom input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
 
@@ -1170,6 +1174,9 @@ const CDN = {
 const MIME = {svg: "image/svg+xml", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp"};
 let R = null;
 let rSize = 19;
+// Until the reader picks, PDF pages follow the system's dark mode.
+let pdfDark = matchMedia("(prefers-color-scheme: dark)").matches;
+try { const v = localStorage.getItem("marginalia.pdfdark"); if (v) pdfDark = v === "1"; } catch (_) {}
 try { rSize = Number(localStorage.getItem("marginalia.rsize")) || 19; } catch (_) {}
 
 async function openReader(b) {
@@ -1179,12 +1186,13 @@ async function openReader(b) {
   S.open = null; renderLayer();
   if (b.status === "quero") { b = Object.assign({}, b, {status: "lendo", startedAt: b.startedAt || today()}); await saveBook(b); }
   const root = document.createElement("div");
-  root.className = "reader"; root.setAttribute("role", "dialog"); root.setAttribute("aria-label", "Leitor");
+  root.className = "reader" + (f.type === "pdf" && pdfDark ? " pdf-dark" : ""); root.setAttribute("role", "dialog"); root.setAttribute("aria-label", "Leitor");
   root.innerHTML = `<div class="r-top">
       <button class="close" type="button" data-r="close" aria-label="Fechar leitor"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
       <div class="r-title">${esc(b.title)}</div>
       <span class="r-stat" id="rTime" title="Tempo de leitura nesta sessão">0:00</span>
       <span class="r-stat" id="rPct">0%</span>
+      ${f.type === "pdf" ? `<button class="btn sm r-theme" type="button" data-r="theme" aria-pressed="${pdfDark}" aria-label="Página escura" title="Página escura"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>` : ""}
       <button class="btn sm" type="button" data-r="smaller" aria-label="Diminuir texto">A−</button>
       <button class="btn sm" type="button" data-r="bigger" aria-label="Aumentar texto">A+</button>
     </div>
@@ -1405,6 +1413,14 @@ function readerSeek(v) {
   const [i, f] = epubAt(p);
   showChapter(i, f);
 }
+function togglePdfDark() {
+  if (!R) return;
+  pdfDark = !pdfDark;
+  try { localStorage.setItem("marginalia.pdfdark", pdfDark ? "1" : "0"); } catch (_) {}
+  R.root.classList.toggle("pdf-dark", pdfDark);
+  const btn = R.root.querySelector('[data-r="theme"]');
+  if (btn) btn.setAttribute("aria-pressed", String(pdfDark));
+}
 function readerZoom(d) {
   if (!R) return;
   if (R.type === "pdf") { R.zoom = Math.max(.6, Math.min(2.5, R.zoom + d * .15)); drawPdf(); return; }
@@ -1441,6 +1457,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.r) {
     const a = t.dataset.r;
     if (a === "close") closeReader(); else if (a === "prev") readerStep(-1); else if (a === "next") readerStep(1);
+    else if (a === "theme") togglePdfDark();
     else if (a === "smaller") readerZoom(-1); else if (a === "bigger") readerZoom(1);
     return;
   }
