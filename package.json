@@ -1,0 +1,11 @@
+{
+  "name": "marginalia",
+  "private": true,
+  "description": "Estante pessoal de livros, em um PWA estático.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
