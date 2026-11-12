@@ -1,9 +1,10 @@
 // Keeps the app usable offline. Our own files are network-first, so each publish reaches the installed app on its next open.
-const CACHE = "marginalia-v1";
+const CACHE = "marginalia-v2";
 const NETWORK_WAIT_MS = 3000;
 
 const APP_FILES = [
   "./",
+  "pdf-view.js",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",

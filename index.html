@@ -17,6 +17,7 @@ if ("serviceWorker" in navigator) addEventListener("load", () => navigator.servi
 // Asked only once installed: in a regular tab some browsers would show a permission prompt on load.
 if ((matchMedia("(display-mode: standalone)").matches || navigator.standalone) && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 </script>
+<script src="pdf-view.js"></script>
 <title>Marginália</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -250,18 +251,24 @@ textarea{resize:vertical;min-height:90px;font-family:var(--f-read);line-height:1
 .r-top{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);background:var(--surface)}
 .r-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .r-stat{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.r-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.r-body{flex:1;position:relative;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.reader.bars-hidden .r-top,.reader.bars-hidden .r-bottom{display:none}
+.reader.bars-hidden .r-body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .r-text{max-width:38em;margin:0 auto;padding:28px max(20px,env(safe-area-inset-right,0px)) 80px max(20px,env(safe-area-inset-left,0px));font-family:var(--f-read);font-size:var(--r-size,19px);line-height:1.7;overflow-wrap:break-word}
 .r-text img,.r-text svg{max-width:100%;height:auto}
 .r-text h1,.r-text h2,.r-text h3{font-family:var(--f-display);font-weight:400;margin:1.2em 0 .6em;line-height:1.2}
 .r-text a{color:var(--accent)}
 .r-text table{display:block;overflow-x:auto}
-.r-pdf{display:flex;justify-content:safe center;padding:16px;overflow:auto}
-.r-pdf canvas{box-shadow:var(--shadow);background:#fff;flex:none}
+/* The page scrolls inside .r-body in both directions, so a zoomed page pans like a picture. */
+.r-pdf{display:flex;justify-content:safe center;align-items:flex-start;box-sizing:border-box;width:max-content;min-width:100%;padding:16px}
+/* Pinch and swipe are handled by the reader, the browser only pans. */
+.r-pdf canvas{box-shadow:var(--shadow);background:#fff;flex:none;touch-action:pan-x pan-y}
 /* Inverts the page but turns hues back, so photos and colored text keep their color. White becomes a soft dark gray, not pure black. */
 .reader.pdf-dark .r-pdf canvas{filter:invert(.88) hue-rotate(180deg)}
-.r-theme{display:inline-grid;place-items:center}
-.r-theme[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.r-icon{display:inline-grid;place-items:center}
+.r-icon[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.r-more{display:flex;align-items:center;gap:10px}
+.r-menu-btn{display:none}
 .r-bottom{display:flex;align-items:center;gap:10px;padding:8px max(12px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));border-top:1px solid var(--line);background:var(--surface)}
 .r-bottom input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
 
@@ -291,6 +298,13 @@ textarea{resize:vertical;min-height:90px;font-family:var(--f-read);line-height:1
   .post{grid-template-columns:52px minmax(0,1fr);gap:12px}
   .tbr-row{grid-template-columns:22px 44px minmax(0,1fr) auto;gap:10px}
   .r-top .btn.sm,.r-bottom .btn.sm{padding:5px 9px}
+  /* Phones keep only close, title and progress in the bar; the rest opens from the ⋯ button. */
+  .r-top{position:relative}
+  .r-menu-btn{display:inline-grid}
+  .r-more{display:none;position:absolute;top:100%;right:max(12px,env(safe-area-inset-right,0px));z-index:2;margin-top:6px;padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+  .reader.menu-open .r-more{display:flex}
+  .r-pdf{padding:0}
+  .r-pdf canvas{box-shadow:none}
 }
 @media (max-width:480px){#rLeft{display:none}}
 @media (min-width:761px){.nav-mobile-only{display:none}}
@@ -1177,6 +1191,9 @@ let rSize = 19;
 // Until the reader picks, PDF pages follow the system's dark mode.
 let pdfDark = matchMedia("(prefers-color-scheme: dark)").matches;
 try { const v = localStorage.getItem("marginalia.pdfdark"); if (v) pdfDark = v === "1"; } catch (_) {}
+let pdfCrop = false;
+try { pdfCrop = localStorage.getItem("marginalia.pdfcrop") === "1"; } catch (_) {}
+const PV = window.PdfView;
 try { rSize = Number(localStorage.getItem("marginalia.rsize")) || 19; } catch (_) {}
 
 async function openReader(b) {
@@ -1190,20 +1207,26 @@ async function openReader(b) {
   root.innerHTML = `<div class="r-top">
       <button class="close" type="button" data-r="close" aria-label="Fechar leitor"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
       <div class="r-title">${esc(b.title)}</div>
-      <span class="r-stat" id="rTime" title="Tempo de leitura nesta sessão">0:00</span>
       <span class="r-stat" id="rPct">0%</span>
-      ${f.type === "pdf" ? `<button class="btn sm r-theme" type="button" data-r="theme" aria-pressed="${pdfDark}" aria-label="Página escura" title="Página escura"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>` : ""}
-      <button class="btn sm" type="button" data-r="smaller" aria-label="Diminuir texto">A−</button>
-      <button class="btn sm" type="button" data-r="bigger" aria-label="Aumentar texto">A+</button>
+      <button class="btn sm r-icon r-menu-btn" type="button" data-r="menu" aria-expanded="false" aria-controls="rMore" aria-label="Mais opções" title="Mais opções"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+      <div class="r-more" id="rMore">
+        <span class="r-stat" id="rTime" title="Tempo de leitura nesta sessão">0:00</span>
+        ${f.type === "pdf" ? `<button class="btn sm r-icon" type="button" data-r="crop" aria-pressed="${pdfCrop}" aria-label="Cortar margens" title="Cortar margens"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14"/></svg></button>
+        <button class="btn sm r-icon" type="button" data-r="theme" aria-pressed="${pdfDark}" aria-label="Página escura" title="Página escura"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>` : ""}
+        <button class="btn sm" type="button" data-r="smaller" aria-label="${f.type === "pdf" ? "Diminuir zoom" : "Diminuir texto"}">A−</button>
+        <button class="btn sm" type="button" data-r="bigger" aria-label="${f.type === "pdf" ? "Aumentar zoom" : "Aumentar texto"}">A+</button>
+      </div>
     </div>
     <div class="r-body" id="rBody"><p class="note" style="padding:24px">Abrindo o livro…</p></div>
     <div class="r-bottom"><button class="btn sm" type="button" data-r="prev">‹ Anterior</button><input type="range" id="rRange" min="0" max="1000" value="0" aria-label="Posição no livro"><span class="r-stat" id="rLeft"></span><button class="btn sm" type="button" data-r="next">Próximo ›</button></div>`;
   document.body.append(root);
   const p0 = progressOf(b) >= 100 && b.status === "lido" ? (Number(b.progressPct) || 0) : progressOf(b);
   R = {book: b, id: b.id, type: f.type, root, body: root.querySelector("#rBody"), active: 0, tick: Date.now(), act: Date.now(),
-       pct: p0, credit: 0, budget: 0, budgetAt: 0, anchor: null, ch: 0, frac: 0, page: 1, n: 0, zoom: 1, urls: [], dirty: false, savedAt: Date.now()};
+       pct: p0, credit: 0, budget: 0, budgetAt: 0, anchor: null, ch: 0, frac: 0, page: 1, n: 0, zoom: 1, urls: [], dirty: false, savedAt: Date.now(),
+       crops: new Map(), draws: 0};
   syncLock();
   R.body.addEventListener("scroll", onReaderScroll, {passive: true});
+  if (f.type === "pdf") wirePdfTouch(R);
   ["pointerdown", "wheel", "touchstart"].forEach(ev => root.addEventListener(ev, () => { if (R) R.act = Date.now(); }, {passive: true}));
   try { if (f.type === "pdf") await openPdf(f.blob); else await openEpub(f.blob); }
   catch (err) {
@@ -1226,26 +1249,155 @@ async function openPdf(blob) {
   const target = resumeTarget();
   const start = target != null ? Math.floor(target / 100 * R.n + .001) + 1 : (R.book.readPos && R.book.readPos.page) || 1;
   R.page = Math.min(R.n, Math.max(1, start));
-  R.body.innerHTML = `<div class="r-pdf"><canvas id="rCanvas"></canvas></div>`;
+  R.body.innerHTML = `<div class="r-pdf"></div>`;
   await drawPdf();
 }
-async function drawPdf() {
-  if (!R || !R.pdf) return;
-  const r = R;
-  const page = await r.pdf.getPage(r.page);
+const PDF_MAX_W = 900;
+// Desktop keeps a margin around the page; phones give it the whole width.
+const pdfPad = () => matchMedia("(max-width:760px)").matches ? 0 : 32;
+// Finds the inked part of a page on a small render, once per page.
+async function cropOf(r, page, num) {
+  if (r.crops.has(num)) return r.crops.get(num);
   const base = page.getViewport({scale: 1});
-  const cssW = Math.max(200, Math.min(r.body.clientWidth - 32, 900)) * r.zoom;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const vp = page.getViewport({scale: cssW / base.width * dpr});
-  const c = r.body.querySelector("#rCanvas"); if (!c) return;
+  const vp = page.getViewport({scale: 160 / base.width});
+  const c = document.createElement("canvas");
+  c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+  const ctx = c.getContext("2d", {willReadFrequently: true});
+  let box = PV.FULL;
+  try {
+    await page.render({canvasContext: ctx, viewport: vp}).promise;
+    box = PV.contentBox(ctx.getImageData(0, 0, c.width, c.height));
+  } catch (_) {}
+  r.crops.set(num, box);
+  return box;
+}
+// The point of the page under (clientX, clientY), so a zoom can keep it under the finger.
+function focusAt(r, clientX, clientY) {
+  const c = r.body.querySelector(".r-pdf canvas"), rect = r.body.getBoundingClientRect();
+  const mx = clientX - rect.left, my = clientY - rect.top;
+  if (!c || !c.offsetWidth) return null;
+  const fx = (r.body.scrollLeft + mx - c.offsetLeft) / c.offsetWidth, fy = (r.body.scrollTop + my - c.offsetTop) / c.offsetHeight;
+  return {fx: Math.min(1, Math.max(0, fx)), fy: Math.min(1, Math.max(0, fy)), mx, my};
+}
+function scrollFrac(r) {
+  const b = r.body, w = b.scrollWidth - b.clientWidth, h = b.scrollHeight - b.clientHeight;
+  return {x: w > 0 ? b.scrollLeft / w : 0, y: h > 0 ? b.scrollTop / h : 0};
+}
+// opts: {to: "top" | "bottom"} after a page turn, {focus} after a zoom, {frac} to keep the place on a redraw.
+async function drawPdf(opts = {}) {
+  if (!R || !R.pdf) return;
+  const r = R, num = r.page, id = ++r.draws;
+  const page = await r.pdf.getPage(num);
+  if (R !== r || id !== r.draws) return;
+  const base = page.getViewport({scale: 1});
+  const crop = pdfCrop ? await cropOf(r, page, num) : PV.FULL;
+  if (R !== r || id !== r.draws) return;
+  r.drawnW = r.body.clientWidth;
+  const boxW = Math.max(200, Math.min(r.body.clientWidth - pdfPad(), PDF_MAX_W));
+  const fit = PV.fitScale({pageW: base.width, pageH: base.height, boxW, zoom: r.zoom, dpr: window.devicePixelRatio || 1, crop});
+  const vp = page.getViewport({scale: fit.scale, offsetX: -crop.x * base.width * fit.scale, offsetY: -crop.y * base.height * fit.scale});
+  // Drawn off screen and swapped in when ready, so turning a page or zooming never flashes a blank page.
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(fit.cssW * fit.ratio)); c.height = Math.max(1, Math.round(fit.cssH * fit.ratio));
+  c.style.width = fit.cssW + "px"; c.style.height = fit.cssH + "px";
   if (r.task) { try { r.task.cancel(); } catch (_) {} }
-  c.width = vp.width; c.height = vp.height;
-  c.style.width = Math.round(vp.width / dpr) + "px"; c.style.height = Math.round(vp.height / dpr) + "px";
-  r.task = page.render({canvasContext: c.getContext("2d"), viewport: vp});
-  try { await r.task.promise; } catch (_) {}
-  if (R !== r) return;
-  r.body.scrollTop = 0;
+  const task = r.task = page.render({canvasContext: c.getContext("2d"), viewport: vp});
+  try { await task.promise; } catch (_) { return; }
+  if (R !== r || id !== r.draws) return;
+  const wrap = r.body.querySelector(".r-pdf"); if (!wrap) return;
+  // Emptying the old canvas frees its memory right away, which iOS needs with big zoomed pages.
+  wrap.querySelectorAll("canvas").forEach(old => { old.width = 0; old.height = 0; });
+  wrap.replaceChildren(c);
+  const b = r.body, f = opts.focus;
+  if (f) { b.scrollLeft = c.offsetLeft + f.fx * c.offsetWidth - f.mx; b.scrollTop = c.offsetTop + f.fy * c.offsetHeight - f.my; }
+  else if (opts.frac) { b.scrollLeft = opts.frac.x * (b.scrollWidth - b.clientWidth); b.scrollTop = opts.frac.y * (b.scrollHeight - b.clientHeight); }
+  else { b.scrollLeft = 0; b.scrollTop = opts.to === "bottom" ? b.scrollHeight : 0; }
   setPct(r.n > 1 && r.page === r.n ? 100 : (r.page - 1) / r.n * 100);
+}
+function setPdfZoom(r, z, focus) {
+  if (Math.abs(z - r.zoom) < .01) return false;
+  r.zoom = z;
+  drawPdf(focus ? {focus} : {frac: scrollFrac(r)});
+  return true;
+}
+const TAP_WAIT_MS = 300;
+// Touch on a PDF page: pinch zooms, double tap toggles 2x, edge taps and swipes turn pages, a center tap hides the bars.
+function wirePdfTouch(r) {
+  const body = r.body;
+  let one = null, pinch = null, lastTap = null, tapTimer = 0;
+  const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  const run = act => {
+    if (R !== r) return;
+    if (act === "next") readerStep(1);
+    else if (act === "prev") readerStep(-1);
+    else if (act === "toggleBars") r.root.classList.toggle("bars-hidden");
+  };
+  const endPinch = commit => {
+    const p = pinch; pinch = null;
+    if (!p) return;
+    const z = PV.clampZoom(p.z0 * p.k, Math.min(1, p.z0));
+    if (!commit || !setPdfZoom(r, z, p.focus)) p.c.style.transform = "";
+  };
+  // iOS Safari would zoom the whole app on a pinch without this.
+  r.root.addEventListener("gesturestart", e => e.preventDefault());
+  body.addEventListener("touchstart", e => {
+    if (e.touches.length === 2) {
+      one = null; lastTap = null; clearTimeout(tapTimer);
+      const c = body.querySelector(".r-pdf canvas");
+      const [a, b] = e.touches;
+      const focus = c && focusAt(r, (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+      if (!focus) return;
+      c.style.transformOrigin = `${focus.fx * c.offsetWidth}px ${focus.fy * c.offsetHeight}px`;
+      pinch = {d0: dist(a, b), z0: r.zoom, k: 1, focus, c};
+    } else if (e.touches.length === 1 && !pinch) {
+      const t = e.touches[0];
+      one = {x: t.clientX, y: t.clientY, t: Date.now(), left: body.scrollLeft, maxLeft: body.scrollWidth - body.clientWidth};
+    } else one = null;
+  }, {passive: true});
+  body.addEventListener("touchmove", e => {
+    if (!pinch || e.touches.length < 2) return;
+    e.preventDefault();
+    const z = PV.pinchZoom(pinch.z0, pinch.d0, dist(e.touches[0], e.touches[1]), Math.min(1, pinch.z0));
+    pinch.k = z / pinch.z0;
+    pinch.c.style.transform = `scale(${pinch.k})`;
+  }, {passive: false});
+  body.addEventListener("touchend", e => {
+    if (pinch) { if (!e.touches.length) endPinch(true); return; }
+    const s = one; one = null;
+    if (!s || e.touches.length) return;
+    const t = e.changedTouches[0], rect = body.getBoundingClientRect();
+    const dx = t.clientX - s.x, dy = t.clientY - s.y;
+    const act = PV.gestureAction({dx, dy, dt: Date.now() - s.t, x: t.clientX - rect.left, width: rect.width,
+      zoomed: s.maxLeft > 1, atLeft: s.left <= 1, atRight: s.left >= s.maxLeft - 1});
+    if (r.root.classList.contains("menu-open")) { if (act !== "none") setReaderMenu(false); return; }
+    if (act === "none") return;
+    if (Math.abs(dx) >= 10 || Math.abs(dy) >= 10) { run(act); return; }
+    // A tap waits a moment to see whether it becomes a double tap.
+    const tap = {t: Date.now(), x: t.clientX, y: t.clientY};
+    clearTimeout(tapTimer);
+    if (PV.isDoubleTap(lastTap, tap)) {
+      lastTap = null;
+      setPdfZoom(r, r.zoom > 1.05 ? 1 : 2, focusAt(r, tap.x, tap.y));
+      return;
+    }
+    lastTap = tap;
+    tapTimer = setTimeout(() => { lastTap = null; run(act); }, TAP_WAIT_MS);
+  });
+  body.addEventListener("touchcancel", () => { one = null; endPinch(false); });
+}
+let resizeTimer = 0;
+// Turning the phone changes the width the page has to fill.
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (R && R.type === "pdf" && R.pdf && R.body.clientWidth !== R.drawnW) drawPdf({frac: scrollFrac(R)});
+  }, 200);
+});
+function setReaderMenu(open) {
+  if (!R) return;
+  R.root.classList.toggle("menu-open", open);
+  const btn = R.root.querySelector('[data-r="menu"]');
+  if (btn) btn.setAttribute("aria-expanded", String(open));
 }
 
 function resolvePath(from, rel) {
@@ -1398,7 +1550,8 @@ async function closeReader() {
 function readerStep(dir) {
   if (!R) return;
   R.act = Date.now();
-  if (R.type === "pdf") { const p = R.page + dir; if (R.pdf && p >= 1 && p <= R.n) { R.page = p; drawPdf(); } return; }
+  // Going back opens the previous page at its end, where the reading left it.
+  if (R.type === "pdf") { const p = R.page + dir; if (R.pdf && p >= 1 && p <= R.n) { R.page = p; drawPdf({to: dir > 0 ? "top" : "bottom"}); } return; }
   if (!R.chapters) return;
   const el = R.body, max = el.scrollHeight - el.clientHeight;
   if (dir > 0) { if (el.scrollTop < max - 4) el.scrollBy({top: el.clientHeight * .9, behavior: "smooth"}); else if (R.ch < R.chapters.length - 1) showChapter(R.ch + 1, 0); }
@@ -1421,9 +1574,21 @@ function togglePdfDark() {
   const btn = R.root.querySelector('[data-r="theme"]');
   if (btn) btn.setAttribute("aria-pressed", String(pdfDark));
 }
+function togglePdfCrop() {
+  if (!R || R.type !== "pdf") return;
+  pdfCrop = !pdfCrop;
+  try { localStorage.setItem("marginalia.pdfcrop", pdfCrop ? "1" : "0"); } catch (_) {}
+  const btn = R.root.querySelector('[data-r="crop"]');
+  if (btn) btn.setAttribute("aria-pressed", String(pdfCrop));
+  drawPdf({frac: scrollFrac(R)});
+}
 function readerZoom(d) {
   if (!R) return;
-  if (R.type === "pdf") { R.zoom = Math.max(.6, Math.min(2.5, R.zoom + d * .15)); drawPdf(); return; }
+  if (R.type === "pdf") {
+    const rect = R.body.getBoundingClientRect();
+    setPdfZoom(R, PV.clampZoom(R.zoom + d * .25), focusAt(R, rect.left + rect.width / 2, rect.top + rect.height / 2));
+    return;
+  }
   rSize = Math.max(14, Math.min(28, rSize + d));
   try { localStorage.setItem("marginalia.rsize", String(rSize)); } catch (_) {}
   const art = R.body.querySelector("#rText");
@@ -1452,12 +1617,16 @@ function openNew(status) {
 function closeLayer() { S.editing = null; S.open = null; S.settings = false; $("#layer").dataset.mode = ""; renderLayer(); }
 
 document.addEventListener("click", async e => {
+  if (R && R.root.classList.contains("menu-open") && !e.target.closest(".r-more, [data-r='menu']")) setReaderMenu(false);
   const t = e.target.closest("button, [data-act], label");
   if (!t) return;
   if (t.dataset.r) {
     const a = t.dataset.r;
+    if (a === "menu") { setReaderMenu(!R.root.classList.contains("menu-open")); return; }
+    // The menu stays open for its own buttons, so A+ can be pressed several times.
+    if (!t.closest(".r-more")) setReaderMenu(false);
     if (a === "close") closeReader(); else if (a === "prev") readerStep(-1); else if (a === "next") readerStep(1);
-    else if (a === "theme") togglePdfDark();
+    else if (a === "theme") togglePdfDark(); else if (a === "crop") togglePdfCrop();
     else if (a === "smaller") readerZoom(-1); else if (a === "bigger") readerZoom(1);
     return;
   }

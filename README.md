@@ -29,6 +29,23 @@ Instalado, o app abre sem internet, inclusive o leitor. Só a busca de livros pr
 
 No iPhone, o app instalado não enxerga os dados do Safari. Use **Baixar cópia** no Safari e **Importar cópia** no app, e adicione de novo os arquivos dos livros.
 
+## Lendo PDF no celular
+
+No celular, a página ocupa a largura toda da tela. No leitor:
+
+- **Pinça** aumenta ou diminui o zoom, e **dois toques** alternam entre a largura da tela e 2x.
+- **Deslizar para os lados** ou **tocar nas bordas** troca de página. Com zoom, deslizar primeiro anda pela página e só troca quando chega na borda.
+- **Tocar no meio** esconde ou mostra as barras.
+- O botão **⋯** guarda o tempo de leitura, a página escura, o zoom e **Cortar margens**, que tira o branco em volta do texto.
+
+## Testes
+
+Precisa do Node 18 ou mais novo, sem instalar nada:
+
+```bash
+npm test
+```
+
 ## Onde ficam os dados
 
 Fora do claude.ai, a estante e os arquivos dos livros ficam só no navegador daquele computador. Nada sincroniza entre aparelhos e o mural de amigos não funciona.
