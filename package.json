@@ -3,6 +3,7 @@
   "private": true,
   "description": "Estante pessoal de livros, em um PWA estático.",
   "scripts": {
+    "start": "node serve.js",
     "test": "node --test"
   },
   "engines": {
