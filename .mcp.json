@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "dev-hub": {
+      "type": "http",
+      "url": "${DEVHUB_URL:-http://127.0.0.1:7420}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${DEVHUB_MCP_TOKEN:-local}",
+        "X-DevHub-Project": "${DEVHUB_PROJECT:-marginalia}",
+        "X-DevHub-Pane": "${TMUX_PANE:-}"
+      }
+    }
+  }
+}
