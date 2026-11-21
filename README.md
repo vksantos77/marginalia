@@ -10,10 +10,10 @@ Clone o repositório e abra o `index.html` no navegador. Não precisa instalar n
 git clone https://github.com/vksantos77/marginalia.git
 ```
 
-Se o navegador reclamar de abrir o arquivo direto, sirva a pasta:
+Se o navegador reclamar de abrir o arquivo direto, sirva a pasta (precisa do Node 18 ou mais novo; a porta muda com `PORT=3000 npm start`):
 
 ```bash
-python -m http.server 8000
+npm start
 ```
 
 Depois acesse http://localhost:8000.
